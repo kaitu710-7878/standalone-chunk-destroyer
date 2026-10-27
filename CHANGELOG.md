@@ -5,19 +5,35 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.0.2-alpha] - 2026-10-28
+
+### 日本語 (Japanese)
+- **元MODテクスチャの引用**: 元MOD Additional-Enchanted-Miner (QuarryPlus) の AdvQuarry 公式ブロックテクスチャを正式に引用・適用。
+- **ライセンスの更新**: 元MODがLGPLv3であることに準拠し、**GPL-3.0 および LGPL-3.0 のデュアルライセンス**に変更。
+- **日英ツールチップ & UI対応の強化**:
+  - アイテムのホバーツールチップを追加（機能概要・電力不要・最大速度・自動搬入等の詳細説明）。
+  - UI内の全ボタン（開始/停止、シルク/幸運切替、液体消去切替、範囲適用、リセット、数値微調整ボタン）にマウスホバーツールチップを追加。
+  - 画面内ステータス表示（稼働中 / 停止中）を言語ファイル対応に国際化。
+
+### English
+- **Quoted Original Mod Textures**: Formally adopted the authentic AdvQuarry block textures from the original Additional-Enchanted-Miner (QuarryPlus) under LGPLv3.
+- **Dual License Update**: Updated licensing to **GPL-3.0 or LGPL-3.0 dual license** in compliance with the original mod's LGPLv3.
+- **Full Bilingual Tooltips & UI Support**:
+  - Added comprehensive item hover tooltips explaining features, zero-power operation, and controls.
+  - Added interactive hover tooltips to all GUI buttons (Start/Stop, Silk/Fortune, Fluids, Apply, Reset, Coordinate adjustments).
+  - Internationalized the in-GUI status text (RUNNING / STOPPED) with lang files.
+
+---
+
 ## [1.0.1-alpha] - 2026-10-28
 
 ### 日本語 (Japanese)
-- **修正 & 改善**:
-  - **クラフトレシピの互換性修正**: 単体Forge環境（他Mod未導入時）でタグ解決が行われないケースに対応するため、#forge:tools/pickaxes と #minecraft:pickaxes の両タグをMod内で定義・強化し、レシピの素材指定に木のツルハシをはじめとするバニラ全ピッケルを直接フォールバックとして追加。木のツルハシで確実に作業台クラフト可能に修正。
-  - **設置時の自動稼働の廃止**: 設置直後は自動稼働せず、安全な停止待機状態（STOPPED）になるよう変更。UI内の「▶ 稼働開始」ボタンを押すことで任意のタイミングで稼働を開始・一時停止可能に修正。
-  - UIの稼働ボタンのラベルを「▶ 稼働開始」/「⏸ 停止」にし、視認性を向上。
+- 木のツルハシを含む作業台クラフトレシピの互換性修正。
+- 設置直後の自動稼働を廃止し、UIの「▶ 稼働開始」ボタンによる手動スタート仕様に変更。
 
 ### English
-- **Fixed & Improved**:
-  - **Crafting Recipe Tag Compatibility**: Added internal tags for #forge:tools/pickaxes and #minecraft:pickaxes, and explicitly registered all vanilla pickaxes (including wooden pickaxe) directly in the crafting recipe ingredient list to guarantee crafting works in standalone environments.
-  - **Prevent Automatic Mining on Placement**: The machine now defaults to a STOPPED state upon placement. Digging only starts when the player clicks the ▶ Start button in the UI.
-  - Enhanced UI start/stop button label visibility with icons.
+- Fixed crafting recipe compatibility with wooden pickaxe in standalone setups.
+- Replaced automatic digging on placement with a manual ▶ Start button in UI.
 
 ---
 
@@ -25,8 +41,6 @@ All notable changes to this project will be documented in this file.
 
 ### 日本語 (Japanese)
 - 初回Alphaリリース。
-- scalable-cats-force 依存排除、電力不要、デフォルト最高速度、キーボード直接数値入力GUI、隣接ストレージ自動格納、パフォーマンス改善。
 
 ### English
 - Initial Alpha release.
-- Standalone Forge 1.20.1 implementation without scalable-cats-force, power-free, maximum speed, keyboard input GUI, adjacent storage auto-push, and performance optimizations.

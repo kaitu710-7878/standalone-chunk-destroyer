@@ -9,6 +9,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.network.chat.Component;
@@ -69,40 +70,49 @@ public class ChunkDestroyerScreen extends AbstractContainerScreen<ChunkDestroyer
 
         // +- 操作ボタン (クリックで現在選択中の入力欄の値を素早く増減)
         this.addRenderableWidget(Button.builder(Component.literal("-16"), b -> adjustFocused(-16))
+                .tooltip(Tooltip.create(Component.translatable("tooltip.chunkdestroyer.btn_adjust_neg16")))
                 .bounds(x + 128, y + 20, 20, 14).build());
         this.addRenderableWidget(Button.builder(Component.literal("-1"), b -> adjustFocused(-1))
+                .tooltip(Tooltip.create(Component.translatable("tooltip.chunkdestroyer.btn_adjust_neg1")))
                 .bounds(x + 150, y + 20, 18, 14).build());
         this.addRenderableWidget(Button.builder(Component.literal("+1"), b -> adjustFocused(1))
+                .tooltip(Tooltip.create(Component.translatable("tooltip.chunkdestroyer.btn_adjust_pos1")))
                 .bounds(x + 128, y + 36, 18, 14).build());
         this.addRenderableWidget(Button.builder(Component.literal("+16"), b -> adjustFocused(16))
+                .tooltip(Tooltip.create(Component.translatable("tooltip.chunkdestroyer.btn_adjust_pos16")))
                 .bounds(x + 148, y + 36, 20, 14).build());
 
         // 範囲適用ボタン
         this.addRenderableWidget(Button.builder(Component.translatable("gui.chunkdestroyer.apply"), b -> sendAreaUpdate())
+                .tooltip(Tooltip.create(Component.translatable("tooltip.chunkdestroyer.btn_apply")))
                 .bounds(x + 128, y + 52, 40, 14).build());
 
         // 動作切替ボタン
         toggleWorkingBtn = Button.builder(getWorkingButtonText(), b -> {
             ModNetwork.CHANNEL.sendToServer(new PacketToggleState(be.getBlockPos(), PacketToggleState.ACTION_TOGGLE_WORKING));
-        }).bounds(x + 8, y + 70, 78, 18).build();
+        }).tooltip(Tooltip.create(Component.translatable("tooltip.chunkdestroyer.btn_working")))
+          .bounds(x + 8, y + 70, 78, 18).build();
         this.addRenderableWidget(toggleWorkingBtn);
 
         // シルクタッチ / 幸運 切替ボタン
         toggleSilkBtn = Button.builder(getSilkButtonText(), b -> {
             ModNetwork.CHANNEL.sendToServer(new PacketToggleState(be.getBlockPos(), PacketToggleState.ACTION_TOGGLE_SILK));
-        }).bounds(x + 90, y + 70, 78, 18).build();
+        }).tooltip(Tooltip.create(Component.translatable("tooltip.chunkdestroyer.btn_silk")))
+          .bounds(x + 90, y + 70, 78, 18).build();
         this.addRenderableWidget(toggleSilkBtn);
 
         // 液体処理切替ボタン
         toggleLiquidBtn = Button.builder(getLiquidButtonText(), b -> {
             ModNetwork.CHANNEL.sendToServer(new PacketToggleState(be.getBlockPos(), PacketToggleState.ACTION_TOGGLE_LIQUIDS));
-        }).bounds(x + 8, y + 92, 78, 18).build();
+        }).tooltip(Tooltip.create(Component.translatable("tooltip.chunkdestroyer.btn_liquid")))
+          .bounds(x + 8, y + 92, 78, 18).build();
         this.addRenderableWidget(toggleLiquidBtn);
 
         // リセットボタン
         this.addRenderableWidget(Button.builder(Component.translatable("gui.chunkdestroyer.reset"), b -> {
             ModNetwork.CHANNEL.sendToServer(new PacketToggleState(be.getBlockPos(), PacketToggleState.ACTION_RESET_POS));
-        }).bounds(x + 90, y + 92, 78, 18).build());
+        }).tooltip(Tooltip.create(Component.translatable("tooltip.chunkdestroyer.btn_reset")))
+          .bounds(x + 90, y + 92, 78, 18).build());
     }
 
     private EditBox createNumericBox(int x, int y, int width, int height, int initialValue) {
@@ -189,9 +199,11 @@ public class ChunkDestroyerScreen extends AbstractContainerScreen<ChunkDestroyer
     protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         guiGraphics.drawString(this.font, this.title, 8, 6, 0x404040, false);
 
-        String statusText = menu.isWorking() ? "RUNNING" : "STOPPED";
+        Component statusComponent = menu.isWorking()
+                ? Component.translatable("gui.chunkdestroyer.status_running")
+                : Component.translatable("gui.chunkdestroyer.status_stopped");
         int statusColor = menu.isWorking() ? 0x228B22 : 0xB22222;
-        guiGraphics.drawString(this.font, statusText, 115, 6, statusColor, false);
+        guiGraphics.drawString(this.font, statusComponent, 105, 6, statusColor, false);
 
         guiGraphics.drawString(this.font, "X:", 8, 23, 0x404040, false);
         guiGraphics.drawString(this.font, "~", 80, 23, 0x404040, false);

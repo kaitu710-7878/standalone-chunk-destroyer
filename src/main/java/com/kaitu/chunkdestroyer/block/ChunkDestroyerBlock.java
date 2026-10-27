@@ -2,14 +2,18 @@ package com.kaitu.chunkdestroyer.block;
 
 import com.kaitu.chunkdestroyer.ChunkDestroyerMod;
 import com.kaitu.chunkdestroyer.blockentity.ChunkDestroyerBlockEntity;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
@@ -84,6 +88,15 @@ public class ChunkDestroyerBlock extends BaseEntityBlock {
             }
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
+    }
+
+    @Override
+    public void appendHoverText(ItemStack stack, @Nullable BlockGetter level, java.util.List<Component> tooltip, TooltipFlag flag) {
+        super.appendHoverText(stack, level, tooltip, flag);
+        tooltip.add(Component.translatable("tooltip.chunkdestroyer.desc1").withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.translatable("tooltip.chunkdestroyer.desc2").withStyle(ChatFormatting.AQUA));
+        tooltip.add(Component.translatable("tooltip.chunkdestroyer.desc3").withStyle(ChatFormatting.GREEN));
+        tooltip.add(Component.translatable("tooltip.chunkdestroyer.desc4").withStyle(ChatFormatting.YELLOW));
     }
 
     @Override
