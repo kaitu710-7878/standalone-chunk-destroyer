@@ -1,0 +1,12 @@
+{
+  "itemGroup.chunkdestroyer": "Chunk Destroyer Standalone",
+  "block.chunkdestroyer.chunk_destroyer": "チャンクデストロイヤー",
+  "gui.chunkdestroyer.start": "稼働開始",
+  "gui.chunkdestroyer.stop": "一時停止",
+  "gui.chunkdestroyer.silk": "シルクタッチ",
+  "gui.chunkdestroyer.fortune": "幸運 III",
+  "gui.chunkdestroyer.liquid_remove": "液体: 除去",
+  "gui.chunkdestroyer.liquid_keep": "液体: 無視",
+  "gui.chunkdestroyer.apply": "適用",
+  "gui.chunkdestroyer.reset": "採掘リセット"
+}

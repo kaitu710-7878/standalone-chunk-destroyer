@@ -1,0 +1,12 @@
+{
+  "itemGroup.chunkdestroyer": "Chunk Destroyer Standalone",
+  "block.chunkdestroyer.chunk_destroyer": "Chunk Destroyer",
+  "gui.chunkdestroyer.start": "Start",
+  "gui.chunkdestroyer.stop": "Stop",
+  "gui.chunkdestroyer.silk": "Silk Touch",
+  "gui.chunkdestroyer.fortune": "Fortune III",
+  "gui.chunkdestroyer.liquid_remove": "Fluids: Clear",
+  "gui.chunkdestroyer.liquid_keep": "Fluids: Keep",
+  "gui.chunkdestroyer.apply": "Apply",
+  "gui.chunkdestroyer.reset": "Reset Pos"
+}

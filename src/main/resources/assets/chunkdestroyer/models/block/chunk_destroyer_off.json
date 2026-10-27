@@ -1,0 +1,9 @@
+{
+  "parent": "minecraft:block/orientable",
+  "textures": {
+    "top": "chunkdestroyer:block/chunk_destroyer_top",
+    "bottom": "chunkdestroyer:block/chunk_destroyer_bottom",
+    "front": "chunkdestroyer:block/chunk_destroyer_front_off",
+    "side": "chunkdestroyer:block/chunk_destroyer_side"
+  }
+}
