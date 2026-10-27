@@ -70,7 +70,7 @@ public class ChunkDestroyerBlockEntity extends BlockEntity implements MenuProvid
     private int currentZ;
 
     // 稼働状態・設定フラグ
-    private boolean working = true;
+    private boolean working = false;
     private boolean silkTouch = true;
     private boolean mineLiquids = true;
     private boolean areaInitialized = false;
@@ -184,6 +184,9 @@ public class ChunkDestroyerBlockEntity extends BlockEntity implements MenuProvid
         pushInternalBufferToAdjacentStorage(serverLevel, pos);
 
         if (!working) {
+            if (state.getValue(ChunkDestroyerBlock.WORKING)) {
+                serverLevel.setBlock(pos, state.setValue(ChunkDestroyerBlock.WORKING, false), 3);
+            }
             return;
         }
 
@@ -407,7 +410,7 @@ public class ChunkDestroyerBlockEntity extends BlockEntity implements MenuProvid
         this.currentY = tag.getInt("CurrentY");
         this.currentZ = tag.getInt("CurrentZ");
 
-        this.working = !tag.contains("Working") || tag.getBoolean("Working");
+        this.working = tag.contains("Working") && tag.getBoolean("Working");
         this.silkTouch = !tag.contains("SilkTouch") || tag.getBoolean("SilkTouch");
         this.mineLiquids = !tag.contains("MineLiquids") || tag.getBoolean("MineLiquids");
         this.areaInitialized = tag.getBoolean("AreaInitialized");

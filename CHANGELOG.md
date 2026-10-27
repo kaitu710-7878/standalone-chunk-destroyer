@@ -5,28 +5,28 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.0.1-alpha] - 2026-10-28
+
+### 日本語 (Japanese)
+- **修正 & 改善**:
+  - **クラフトレシピの互換性修正**: 単体Forge環境（他Mod未導入時）でタグ解決が行われないケースに対応するため、#forge:tools/pickaxes と #minecraft:pickaxes の両タグをMod内で定義・強化し、レシピの素材指定に木のツルハシをはじめとするバニラ全ピッケルを直接フォールバックとして追加。木のツルハシで確実に作業台クラフト可能に修正。
+  - **設置時の自動稼働の廃止**: 設置直後は自動稼働せず、安全な停止待機状態（STOPPED）になるよう変更。UI内の「▶ 稼働開始」ボタンを押すことで任意のタイミングで稼働を開始・一時停止可能に修正。
+  - UIの稼働ボタンのラベルを「▶ 稼働開始」/「⏸ 停止」にし、視認性を向上。
+
+### English
+- **Fixed & Improved**:
+  - **Crafting Recipe Tag Compatibility**: Added internal tags for #forge:tools/pickaxes and #minecraft:pickaxes, and explicitly registered all vanilla pickaxes (including wooden pickaxe) directly in the crafting recipe ingredient list to guarantee crafting works in standalone environments.
+  - **Prevent Automatic Mining on Placement**: The machine now defaults to a STOPPED state upon placement. Digging only starts when the player clicks the ▶ Start button in the UI.
+  - Enhanced UI start/stop button label visibility with icons.
+
+---
+
 ## [1.0.0-alpha] - 2026-10-28
 
 ### 日本語 (Japanese)
-- **新規追加**:
-  - scalable-cats-force の前提依存を完全排除した、Minecraft 1.20.1 Forge向けの独立型チャンクデストロイヤー（Chunk Destroyer）を新規実装。
-  - 電力を消費せず稼働するエネルギーフリー仕様を実装。
-  - デフォルトでアップグレード最大搭載相当の超高速採掘（デフォルト: 1tickあたり64ブロック採掘）を実現。
-  - GUIにキーボードによる直接数値入力欄（EditBox）を実装。クリックしてMin/Max X, Y, Zをキーボード入力可能にし、同時に+-ボタン（-16, -1, +1, +16）でのクイック増減にも対応。
-  - 周囲6面の隣接ストレージ（チェスト、バレル、外部Mod倉庫等）への自動・直接アイテム搬入システムを実装。
-  - パフォーマンス改善: ItemEntityのワールド生成をバイパスし、ドロップを直接アイテムスタックとして回収・格納。ブロック更新通知（Neighbor Updates）の連鎖をブロックしサーバーTPS/クライアントFPSの低下を大幅改善。
-  - 作業台クラフトレシピの追加（中央にタグ #forge:tools/pickaxes の任意のツルハシ、周囲8スロットにレッドストーンの粉）。
-  - シルクタッチ / 幸運 III のGUI切り替え機能および液体（水・溶岩）一括消去トグル機能。
-  - 日英バイリンガル対応（ja_jp.json, en_us.json, README, CHANGELOG, CONFIG）。
+- 初回Alphaリリース。
+- scalable-cats-force 依存排除、電力不要、デフォルト最高速度、キーボード直接数値入力GUI、隣接ストレージ自動格納、パフォーマンス改善。
 
 ### English
-- **Added**:
-  - Standalone Chunk Destroyer for Minecraft 1.20.1 Forge without scalable-cats-force dependency.
-  - Power-free operation (zero RF/FE energy needed).
-  - Maximum speed out of the box (default: 64 blocks mined per tick).
-  - Direct keyboard coordinate input via EditBoxes in GUI alongside +- adjustment buttons (-16, -1, +1, +16).
-  - Direct adjacent storage item auto-insertion capability (supports all 6 sides, chests, drawers, barrels, etc.).
-  - Drastic performance optimization: bypasses ItemEntity world spawning by accumulating direct loot drops, and prevents cascading neighbor updates for buttery-smooth server TPS.
-  - Crafting table recipe (center: #forge:tools/pickaxes, surrounded by 8 Redstone Dust).
-  - Silk Touch / Fortune III toggle and fluid removal mode toggle in GUI.
-  - Full bilingual support (Japanese & English).
+- Initial Alpha release.
+- Standalone Forge 1.20.1 implementation without scalable-cats-force, power-free, maximum speed, keyboard input GUI, adjacent storage auto-push, and performance optimizations.

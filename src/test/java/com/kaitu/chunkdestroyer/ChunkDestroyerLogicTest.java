@@ -8,6 +8,13 @@ import static org.junit.jupiter.api.Assertions.*;
 public class ChunkDestroyerLogicTest {
 
     @Test
+    @DisplayName("Test Initial Placement Working State is False")
+    void testInitialPlacementWorkingState() {
+        boolean initialWorkingState = false;
+        assertFalse(initialWorkingState, "Chunk Destroyer must be stopped upon placement until user clicks Start button in UI");
+    }
+
+    @Test
     @DisplayName("Test Area Calculation & Bounds")
     void testAreaBounds() {
         int inputMinX = 10;

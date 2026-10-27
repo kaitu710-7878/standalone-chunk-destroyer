@@ -1,8 +1,8 @@
 {
   "itemGroup.chunkdestroyer": "Chunk Destroyer Standalone",
   "block.chunkdestroyer.chunk_destroyer": "チャンクデストロイヤー",
-  "gui.chunkdestroyer.start": "稼働開始",
-  "gui.chunkdestroyer.stop": "一時停止",
+  "gui.chunkdestroyer.start": "▶ 稼働開始",
+  "gui.chunkdestroyer.stop": "⏸ 停止",
   "gui.chunkdestroyer.silk": "シルクタッチ",
   "gui.chunkdestroyer.fortune": "幸運 III",
   "gui.chunkdestroyer.liquid_remove": "液体: 除去",

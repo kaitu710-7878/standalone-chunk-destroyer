@@ -9,9 +9,32 @@
     "R": {
       "item": "minecraft:redstone"
     },
-    "P": {
-      "tag": "forge:tools/pickaxes"
-    }
+    "P": [
+      {
+        "tag": "forge:tools/pickaxes"
+      },
+      {
+        "tag": "minecraft:pickaxes"
+      },
+      {
+        "item": "minecraft:wooden_pickaxe"
+      },
+      {
+        "item": "minecraft:stone_pickaxe"
+      },
+      {
+        "item": "minecraft:iron_pickaxe"
+      },
+      {
+        "item": "minecraft:golden_pickaxe"
+      },
+      {
+        "item": "minecraft:diamond_pickaxe"
+      },
+      {
+        "item": "minecraft:netherite_pickaxe"
+      }
+    ]
   },
   "result": {
     "item": "chunkdestroyer:chunk_destroyer",

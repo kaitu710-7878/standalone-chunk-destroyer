@@ -39,7 +39,7 @@ public class ChunkDestroyerBlock extends BaseEntityBlock {
                 .requiresCorrectToolForDrops());
         this.registerDefaultState(this.stateDefinition.any()
                 .setValue(FACING, Direction.NORTH)
-                .setValue(WORKING, true));
+                .setValue(WORKING, false));
     }
 
     @Override
@@ -52,7 +52,7 @@ public class ChunkDestroyerBlock extends BaseEntityBlock {
     public BlockState getStateForPlacement(BlockPlaceContext context) {
         return this.defaultBlockState()
                 .setValue(FACING, context.getHorizontalDirection().getOpposite())
-                .setValue(WORKING, true);
+                .setValue(WORKING, false);
     }
 
     @Override

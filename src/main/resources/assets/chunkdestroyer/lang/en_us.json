@@ -1,8 +1,8 @@
 {
   "itemGroup.chunkdestroyer": "Chunk Destroyer Standalone",
   "block.chunkdestroyer.chunk_destroyer": "Chunk Destroyer",
-  "gui.chunkdestroyer.start": "Start",
-  "gui.chunkdestroyer.stop": "Stop",
+  "gui.chunkdestroyer.start": "▶ Start",
+  "gui.chunkdestroyer.stop": "⏸ Stop",
   "gui.chunkdestroyer.silk": "Silk Touch",
   "gui.chunkdestroyer.fortune": "Fortune III",
   "gui.chunkdestroyer.liquid_remove": "Fluids: Clear",
