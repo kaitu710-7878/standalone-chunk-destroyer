@@ -2,7 +2,7 @@
 
 [![Minecraft 1.20.1](https://img.shields.io/badge/Minecraft-1.20.1-brightgreen.svg)](https://minecraft.net/)
 [![Forge](https://img.shields.io/badge/Forge-47.3.0+-orange.svg)](https://files.minecraftforge.net/)
-[![Release: Beta](https://img.shields.io/badge/Release-Beta%20(v1.1.0)--beta-blueviolet.svg)](https://github.com/kaitu710-7878/standalone-chunk-destroyer/releases)
+[![Release: Beta](https://img.shields.io/badge/Release-Beta%20(v1.1.1)--beta-blueviolet.svg)](https://github.com/kaitu710-7878/standalone-chunk-destroyer/releases)
 [![License: GPL-3.0 or LGPL-3.0](https://img.shields.io/badge/License-GPL--3.0%20%7C%20LGPL--3.0-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
 
 ---
@@ -11,10 +11,15 @@
 
 ### 概要
 **Standalone Chunk Destroyer** は、dditional-enchanted-miner（QuarryPlus / Kotori316氏作）の「チャンクデストロイヤー（AdvQuarry）」をベースに、前提MOD（scalable-cats-force 等）への依存を完全に排除し、単体で動作するよう最適化・機能拡張された独立MODです。
-最新の **Beta版（v1.1.0-beta）** では、アイテムのドロップ化によるサーバーラグを完全根絶する**「無限仮置きストレージシステム」**と**「安全な採掘開始制限」**を搭載しています。
+最新の **Beta版（v1.1.1-beta）** では、アイテムのドロップ化によるサーバーラグを完全根絶する**「無限仮置きストレージシステム」**と**「安全な採掘開始制限」**に加え、**256pxワイドUI（中央十字チャンク指定・右側ボタン群・左側ステータス表示）**を搭載しています。
 
 ### 主な特徴
-1. **パフォーマンス改善：無限仮置きストレージシステム (Infinite Staging Buffer)**
+1. **256pxワイドGUI＆最適化レイアウト (Wide GUI & Ergonomic Layout)**
+   - UIの密度を解消するため横幅256pxに拡張。
+   - **左側**: 稼働状態（稼働中/停止中）、進捗率、仮置きアイテム数をリアルタイム表示。
+   - **中央**: 十字方位チャンク指定（北・南・西・東）とキーボード直接数値入力枠・増減ボタン。Sラベルのめり込みも完全解消。
+   - **右側**: 縦並びの操作ボタン群（開始/停止、シルク/幸運、液体、石削除、土削除、リセット）。
+2. **パフォーマンス改善：無限仮置きストレージシステム (Infinite Staging Buffer)**
    - 内部インベントリや隣接ストレージが満杯になった場合、アイテムをワールド上にドロップ（エンティティ化）せず、チャンクデストロイヤー内部の仮置きストレージに安全に保管します。
    - 大量のドロップアイテム（ItemEntity）がワールドに溢れることによる激しいサーバーTPS低下やクライアントFPS低下を完全に防止します。
    - ストレージやインベントリに空きができ次第、毎tick仮置きストレージから優先的に自動補充・搬出されます。
@@ -50,7 +55,7 @@
 
 ### 導入方法
 1. Minecraft 1.20.1 および Minecraft Forge（47.3.0以上推奨）をインストールします。
-2. [Releases](../../releases) からビルド済みJARファイル（chunkdestroyer-1.1.0-beta.jar）をダウンロードします。
+2. [Releases](../../releases) からビルド済みJARファイル（chunkdestroyer-1.1.1-beta.jar）をダウンロードします。
 3. ダウンロードしたJARファイルを .minecraft/mods フォルダに配置します。
 
 ---
@@ -59,10 +64,15 @@
 
 ### Overview
 **Standalone Chunk Destroyer** is a standalone, performance-optimized reimplementation of the Chunk Destroyer (AdvQuarry) from dditional-enchanted-miner (QuarryPlus by Kotori316).
-In this **Beta release (v1.1.0-beta)**, it introduces an **Infinite Staging Buffer system** to completely eliminate entity lag caused by overflowing drops, accompanied by a **safe mining start gate**.
+In this **Beta release (v1.1.1-beta)**, it introduces a **256px Wide GUI Layout** (Left: Status/Buffer, Center: Cross Chunk Controls with no overlaps, Right: Action Buttons), alongside the **Infinite Staging Buffer system** and **Safe Mining Start Gate**.
 
 ### Key Features
-1. **Performance Optimization: Infinite Staging Buffer**
+1. **256px Wide Screen & Ergonomic UI Layout**
+   - High-density UI completely resolved by expanding the GUI texture to 256px.
+   - **Left**: Real-time status indicator, mining progress, and staged buffer item count.
+   - **Center**: Cross-directional chunk bounds (N, S, W, E) with keyboard numeric input & +/- buttons. Fixed "S" label overlap.
+   - **Right**: Vertically aligned action buttons (Start/Stop, Silk/Fortune, Fluids, Void Stone, Void Dirt, Reset).
+2. **Performance Optimization: Infinite Staging Buffer**
    - Mined items are never dropped into the world as entities when internal/adjacent storages are full; they are safely stored in an internal infinite staging buffer.
    - Completely prevents severe server TPS drops and client FPS degradation caused by thousands of ItemEntities.
    - Automatically flushes items into adjacent storages as soon as free slots become available.
@@ -93,5 +103,5 @@ In this **Beta release (v1.1.0-beta)**, it introduces an **Infinite Staging Buff
 
 ### Installation
 1. Install Minecraft 1.20.1 and Minecraft Forge (47.3.0+).
-2. Download the latest compiled JAR (chunkdestroyer-1.1.0-beta.jar) from the [Releases](../../releases) tab.
+2. Download the latest compiled JAR (chunkdestroyer-1.1.1-beta.jar) from the [Releases](../../releases) tab.
 3. Place the JAR file into your .minecraft/mods directory.

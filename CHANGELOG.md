@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.1.1-beta] - 2026-10-28
+
+### 日本語 (Japanese)
+- **UIレイアウトの横幅拡張（256pxワイドGUI化）**:
+  - UI内の情報密度が高く窮屈だった問題を解消するため、GUI画面およびテクスチャを横幅256pxに大幅拡張。
+  - **左側エリア**: 稼働状態（稼働中/停止中）、進捗率（進捗: X%）、仮置きアイテム数（仮置き: X個）を整理して左側に配置。
+  - **中央エリア**: 本家AdvQuarryスタイルの十字方位チャンク指定（北・南・西・東）と直接数値入力枠・増減ボタンを中央に配置。
+    - 方位ラベル（N/S/W/E）の配置を見直し、南の「S」ラベルが上のUI入力枠・ボタンにめり込んでいた重なり問題を完全に解消。
+  - **右側エリア**: 縦1列に各操作ボタン（稼働開始/停止、シルク/幸運、液体消去/保持、石削除ON/OFF、土削除ON/OFF、採掘位置リセット）を整然と配置し、視認性と操作性を劇的に向上。
+
+### English
+- **GUI Layout Overhaul & 256px Wide Screen**:
+  - Expanded GUI width to 256px to resolve crowded UI density.
+  - **Left Section**: Displays current status (RUNNING/STOPPED), excavation progress (Progress: X%), and pending staging buffer count (Pending: X).
+  - **Center Section**: Cross-directional chunk configuration (North, South, West, East) with keyboard numeric input boxes and +/- buttons.
+    - Completely resolved the label collision issue where the "S" (South) label overlapped with upper controls.
+  - **Right Section**: Vertically stacked control buttons (Start/Stop, Silk/Fortune, Fluids, Void Stone, Void Dirt, Reset) for optimal ergonomics.
+
+---
+
 ## [1.1.0-beta] - 2026-10-28
 
 ### 日本語 (Japanese)

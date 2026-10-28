@@ -26,22 +26,23 @@ public class ChunkDestroyerMenu extends AbstractContainerMenu {
         this.levelAccess = ContainerLevelAccess.create(entity.getLevel(), entity.getBlockPos());
         this.data = data;
 
-        // 内部バッファスロット (上部右側にコンパクトな3スロットまたは1行、または安全用スロット)
-        // ここでは安全にアイテムを取り出せるよう、9スロット (1行x9列) を Y=106 に配置
+        int slotStartX = 47;
+
+        // 内部バッファスロット (1行x9列) Y=106
         for (int col = 0; col < 9; col++) {
-            this.addSlot(new SlotItemHandler(blockEntity.getItemHandler(), col, 8 + col * 18, 106));
+            this.addSlot(new SlotItemHandler(blockEntity.getItemHandler(), col, slotStartX + col * 18, 106));
         }
 
         // プレイヤーインベントリ (3行 x 9列) Y=128
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
-                this.addSlot(new Slot(playerInventory, col + row * 9 + 9, 8 + col * 18, 128 + row * 18));
+                this.addSlot(new Slot(playerInventory, col + row * 9 + 9, slotStartX + col * 18, 128 + row * 18));
             }
         }
 
         // プレイヤーホットバー (9スロット) Y=186
         for (int col = 0; col < 9; col++) {
-            this.addSlot(new Slot(playerInventory, col, 8 + col * 18, 186));
+            this.addSlot(new Slot(playerInventory, col, slotStartX + col * 18, 186));
         }
 
         addDataSlots(data);
