@@ -6,7 +6,6 @@ import com.kaitu.chunkdestroyer.config.ModConfig;
 import com.kaitu.chunkdestroyer.menu.ChunkDestroyerMenu;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.Connection;
 import net.minecraft.network.chat.Component;
@@ -14,7 +13,6 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -47,7 +45,7 @@ import java.util.List;
 public class ChunkDestroyerBlockEntity extends BlockEntity implements MenuProvider {
     public static final int INVENTORY_SIZE = 27;
 
-    // 内部アイテムストレージ (27スロット)
+    // 内部アイテムストレージ
     private final ItemStackHandler itemHandler = new ItemStackHandler(INVENTORY_SIZE) {
         @Override
         protected void onContentsChanged(int slot) {
@@ -56,7 +54,13 @@ public class ChunkDestroyerBlockEntity extends BlockEntity implements MenuProvid
     };
     private final LazyOptional<IItemHandler> itemHandlerOptional = LazyOptional.of(() -> itemHandler);
 
-    // 範囲設定 (デフォルト: 設置チャンクの境界 16x16, Yはワールド底〜現在Y-1)
+    // チャンク指定 (設置チャンクを基準とした各方位への拡張チャンク数: 0 = 設置チャンクのみ)
+    private int chunkNorth = 0;
+    private int chunkSouth = 0;
+    private int chunkWest = 0;
+    private int chunkEast = 0;
+
+    // 実際の採掘境界 (ブロック座標)
     private int minX;
     private int maxX;
     private int minY = -64;
@@ -64,18 +68,20 @@ public class ChunkDestroyerBlockEntity extends BlockEntity implements MenuProvid
     private int minZ;
     private int maxZ;
 
-    // 現在の採掘カーソル
+    // 現在の採掘水平カーソル (垂直柱単位で掘るためX, Zのみ管理)
     private int currentX;
-    private int currentY;
     private int currentZ;
+    private boolean finished = false;
 
-    // 稼働状態・設定フラグ
+    // 設定・モード
     private boolean working = false;
     private boolean silkTouch = true;
     private boolean mineLiquids = true;
+    private boolean voidStone = false;
+    private boolean voidDirt = false;
     private boolean areaInitialized = false;
 
-    // コンテナデータ (GUIとの同期用: 0:working, 1:silkTouch, 2:mineLiquids, 3:progressPercent, etc)
+    // GUI同期データ (10スロット)
     protected final ContainerData dataAccess = new ContainerData() {
         @Override
         public int get(int index) {
@@ -83,7 +89,13 @@ public class ChunkDestroyerBlockEntity extends BlockEntity implements MenuProvid
                 case 0 -> working ? 1 : 0;
                 case 1 -> silkTouch ? 1 : 0;
                 case 2 -> mineLiquids ? 1 : 0;
-                case 3 -> currentY;
+                case 3 -> voidStone ? 1 : 0;
+                case 4 -> voidDirt ? 1 : 0;
+                case 5 -> chunkNorth;
+                case 6 -> chunkSouth;
+                case 7 -> chunkWest;
+                case 8 -> chunkEast;
+                case 9 -> finished ? 100 : calculateProgress();
                 default -> 0;
             };
         }
@@ -94,13 +106,18 @@ public class ChunkDestroyerBlockEntity extends BlockEntity implements MenuProvid
                 case 0 -> working = value != 0;
                 case 1 -> silkTouch = value != 0;
                 case 2 -> mineLiquids = value != 0;
-                case 3 -> currentY = value;
+                case 3 -> voidStone = value != 0;
+                case 4 -> voidDirt = value != 0;
+                case 5 -> chunkNorth = value;
+                case 6 -> chunkSouth = value;
+                case 7 -> chunkWest = value;
+                case 8 -> chunkEast = value;
             }
         }
 
         @Override
         public int getCount() {
-            return 4;
+            return 10;
         }
     };
 
@@ -110,47 +127,57 @@ public class ChunkDestroyerBlockEntity extends BlockEntity implements MenuProvid
 
     private void ensureAreaInitialized() {
         if (!areaInitialized && level != null) {
-            ChunkPos chunkPos = new ChunkPos(worldPosition);
-            this.minX = chunkPos.getMinBlockX();
-            this.maxX = chunkPos.getMaxBlockX();
-            this.minZ = chunkPos.getMinBlockZ();
-            this.maxZ = chunkPos.getMaxBlockZ();
-            this.minY = level.getMinBuildHeight();
-            this.maxY = Math.max(minY, worldPosition.getY() - 1);
-
+            calculateBlockBounds();
             resetMiningCursor();
             areaInitialized = true;
             setChanged();
         }
     }
 
-    public void resetMiningCursor() {
-        this.currentY = this.maxY;
-        this.currentX = this.minX;
-        this.currentZ = this.minZ;
+    private void calculateBlockBounds() {
+        if (level == null) return;
+        ChunkPos center = new ChunkPos(worldPosition);
+        int minChunkX = center.x - Math.max(0, chunkWest);
+        int maxChunkX = center.x + Math.max(0, chunkEast);
+        int minChunkZ = center.z - Math.max(0, chunkNorth);
+        int maxChunkZ = center.z + Math.max(0, chunkSouth);
+
+        this.minX = minChunkX * 16;
+        this.maxX = maxChunkX * 16 + 15;
+        this.minZ = minChunkZ * 16;
+        this.maxZ = maxChunkZ * 16 + 15;
+        this.minY = level.getMinBuildHeight();
+        this.maxY = Math.max(minY, worldPosition.getY() - 1);
+    }
+
+    public void setChunkRange(int north, int south, int west, int east) {
+        int maxChunkLimit = ModConfig.COMMON.maxRadiusBlocks.get() / 16;
+        this.chunkNorth = Math.max(0, Math.min(north, maxChunkLimit));
+        this.chunkSouth = Math.max(0, Math.min(south, maxChunkLimit));
+        this.chunkWest = Math.max(0, Math.min(west, maxChunkLimit));
+        this.chunkEast = Math.max(0, Math.min(east, maxChunkLimit));
+
+        calculateBlockBounds();
+        resetMiningCursor();
+        this.areaInitialized = true;
         setChanged();
         syncToClient();
     }
 
-    public void setMiningArea(int minX, int maxX, int minY, int maxY, int minZ, int maxZ) {
-        int maxRadius = ModConfig.COMMON.maxRadiusBlocks.get();
-        this.minX = Math.max(worldPosition.getX() - maxRadius, Math.min(minX, maxX));
-        this.maxX = Math.min(worldPosition.getX() + maxRadius, Math.max(minX, maxX));
-
-        int minWorldY = level != null ? level.getMinBuildHeight() : -64;
-        int maxWorldY = level != null ? level.getMaxBuildHeight() : 320;
-        this.minY = Math.max(minWorldY, Math.min(minY, maxY));
-        this.maxY = Math.min(maxWorldY, Math.max(minY, maxY));
-
-        this.minZ = Math.max(worldPosition.getZ() - maxRadius, Math.min(minZ, maxZ));
-        this.maxZ = Math.min(worldPosition.getZ() + maxRadius, Math.max(minZ, maxZ));
-
-        this.areaInitialized = true;
-        resetMiningCursor();
+    public void resetMiningCursor() {
+        calculateBlockBounds();
+        this.currentX = this.minX;
+        this.currentZ = this.minZ;
+        this.finished = false;
+        setChanged();
+        syncToClient();
     }
 
     public void toggleWorking() {
         this.working = !this.working;
+        if (this.working) {
+            this.finished = false;
+        }
         if (level != null && !level.isClientSide) {
             BlockState state = getBlockState();
             if (state.hasProperty(ChunkDestroyerBlock.WORKING) && state.getValue(ChunkDestroyerBlock.WORKING) != this.working) {
@@ -173,26 +200,39 @@ public class ChunkDestroyerBlockEntity extends BlockEntity implements MenuProvid
         syncToClient();
     }
 
+    public void toggleVoidStone() {
+        this.voidStone = !this.voidStone;
+        setChanged();
+        syncToClient();
+    }
+
+    public void toggleVoidDirt() {
+        this.voidDirt = !this.voidDirt;
+        setChanged();
+        syncToClient();
+    }
+
+    private int calculateProgress() {
+        long totalColumns = (long) (maxX - minX + 1) * (maxZ - minZ + 1);
+        if (totalColumns <= 0) return 0;
+        long processedColumns = (long) (currentZ - minZ) * (maxX - minX + 1) + (currentX - minX);
+        return (int) Math.min(100, Math.max(0, (processedColumns * 100) / totalColumns));
+    }
+
     public static void serverTick(Level level, BlockPos pos, BlockState state, ChunkDestroyerBlockEntity be) {
         be.tickServer((ServerLevel) level, pos, state);
     }
 
+    /**
+     * 本家チャンクデストロイヤー仕様: 垂直柱 (X, Z の全Yブロック) を一括掘削
+     */
     private void tickServer(ServerLevel serverLevel, BlockPos pos, BlockState state) {
         ensureAreaInitialized();
 
         // 内部バッファのアイテムを隣接チェストへ排出
         pushInternalBufferToAdjacentStorage(serverLevel, pos);
 
-        if (!working) {
-            if (state.getValue(ChunkDestroyerBlock.WORKING)) {
-                serverLevel.setBlock(pos, state.setValue(ChunkDestroyerBlock.WORKING, false), 3);
-            }
-            return;
-        }
-
-        // 採掘完了チェック
-        if (currentY < minY) {
-            // 範囲内の全ブロック採掘完了
+        if (!working || finished) {
             if (state.getValue(ChunkDestroyerBlock.WORKING)) {
                 serverLevel.setBlock(pos, state.setValue(ChunkDestroyerBlock.WORKING, false), 3);
             }
@@ -203,12 +243,13 @@ public class ChunkDestroyerBlockEntity extends BlockEntity implements MenuProvid
             serverLevel.setBlock(pos, state.setValue(ChunkDestroyerBlock.WORKING, true), 3);
         }
 
-        // デフォルトでアップグレード最大搭載速度
-        int blocksPerTick = ModConfig.COMMON.blocksPerTick.get();
+        // デフォルトでアップグレード最大搭載速度 (1tickあたり処理する垂直列数)
+        // 1列あたり約100〜380ブロック存在するため、例えば16列で数千ブロックを一瞬で破壊！
+        int columnsPerTick = Math.max(1, ModConfig.COMMON.blocksPerTick.get() / 4);
         boolean allowBedrock = ModConfig.COMMON.mineBedrock.get();
         boolean removeFluidsConfig = ModConfig.COMMON.removeFluids.get() && this.mineLiquids;
 
-        // ドロップ計算用の擬似ツール（シルクタッチ または 幸運III）
+        // ドロップ計算用の擬似ツール
         ItemStack tool = new ItemStack(Items.NETHERITE_PICKAXE);
         if (silkTouch) {
             tool.enchant(Enchantments.SILK_TOUCH, 1);
@@ -218,54 +259,69 @@ public class ChunkDestroyerBlockEntity extends BlockEntity implements MenuProvid
         tool.enchant(Enchantments.BLOCK_EFFICIENCY, 5);
 
         List<ItemStack> collectedDrops = new ArrayList<>();
-        int blocksDestroyedThisTick = 0;
-        int maxScanSteps = blocksPerTick * 8; // 空気などをスキップするための最大ステップ上限
-        int scanSteps = 0;
+        int columnsProcessed = 0;
+        BlockPos.MutableBlockPos columnPos = new BlockPos.MutableBlockPos();
 
-        BlockPos.MutableBlockPos targetPos = new BlockPos.MutableBlockPos();
+        while (columnsProcessed < columnsPerTick && !finished) {
+            // (currentX, currentZ) の垂直柱を Y最上段からY最下層まで一括採掘！
+            for (int y = maxY; y >= minY; y--) {
+                columnPos.set(currentX, y, currentZ);
 
-        while (blocksDestroyedThisTick < blocksPerTick && currentY >= minY && scanSteps < maxScanSteps) {
-            scanSteps++;
-            targetPos.set(currentX, currentY, currentZ);
+                // 自身の位置は掘らない
+                if (columnPos.equals(pos) || !serverLevel.isLoaded(columnPos)) {
+                    continue;
+                }
 
-            // 自身の位置は掘らない
-            if (!targetPos.equals(pos) && serverLevel.isLoaded(targetPos)) {
-                BlockState targetState = serverLevel.getBlockState(targetPos);
+                BlockState targetState = serverLevel.getBlockState(columnPos);
+                if (targetState.isAir()) continue;
 
-                if (!targetState.isAir()) {
-                    boolean isFluid = !targetState.getFluidState().isEmpty();
-
-                    if (isFluid) {
-                        if (removeFluidsConfig) {
-                            // 液体を一括消去（近傍更新なしでAIRに置換）
-                            serverLevel.setBlock(targetPos, Blocks.AIR.defaultBlockState(), 2);
-                            blocksDestroyedThisTick++;
+                boolean isFluid = !targetState.getFluidState().isEmpty();
+                if (isFluid) {
+                    if (removeFluidsConfig) {
+                        serverLevel.setBlock(columnPos, Blocks.AIR.defaultBlockState(), 2);
+                    }
+                } else {
+                    boolean isBedrock = targetState.is(Blocks.BEDROCK);
+                    if (!isBedrock || allowBedrock) {
+                        BlockEntity targetBe = serverLevel.getBlockEntity(columnPos);
+                        LootParams.Builder lootBuilder = new LootParams.Builder(serverLevel)
+                                .withParameter(LootContextParams.ORIGIN, Vec3.atCenterOf(columnPos))
+                                .withParameter(LootContextParams.TOOL, tool);
+                        if (targetBe != null) {
+                            lootBuilder.withOptionalParameter(LootContextParams.BLOCK_ENTITY, targetBe);
                         }
-                    } else {
-                        boolean isBedrock = targetState.is(Blocks.BEDROCK);
-                        if (!isBedrock || allowBedrock) {
-                            // パフォーマンス改善: ItemEntity をスポーンさせず、ドロップを直接回収
-                            BlockEntity targetBe = serverLevel.getBlockEntity(targetPos);
-                            LootParams.Builder lootBuilder = new LootParams.Builder(serverLevel)
-                                    .withParameter(LootContextParams.ORIGIN, Vec3.atCenterOf(targetPos))
-                                    .withParameter(LootContextParams.TOOL, tool);
-                            if (targetBe != null) {
-                                lootBuilder.withOptionalParameter(LootContextParams.BLOCK_ENTITY, targetBe);
+
+                        List<ItemStack> drops = targetState.getDrops(lootBuilder);
+                        for (ItemStack drop : drops) {
+                            // 土系・石系アイテムの削除 (Void) 判定
+                            if (voidStone && ItemFilterHelper.isStone(drop)) {
+                                continue;
                             }
-
-                            List<ItemStack> drops = targetState.getDrops(lootBuilder);
-                            collectedDrops.addAll(drops);
-
-                            // ブロックを空気にして消去 (フラグ2: UPDATE_CLIENTS のみで近傍更新の連鎖を防ぐ)
-                            serverLevel.setBlock(targetPos, Blocks.AIR.defaultBlockState(), 2);
-                            blocksDestroyedThisTick++;
+                            if (voidDirt && ItemFilterHelper.isDirt(drop)) {
+                                continue;
+                            }
+                            collectedDrops.add(drop);
                         }
+
+                        // ブロックを空気に置換 (フラグ2: UPDATE_CLIENTS のみで連鎖更新を防止)
+                        serverLevel.setBlock(columnPos, Blocks.AIR.defaultBlockState(), 2);
                     }
                 }
             }
 
-            // 次の座標へインクリメント
-            advanceCursor();
+            columnsProcessed++;
+
+            // 次の (X, Z) 柱へ進む
+            currentX++;
+            if (currentX > maxX) {
+                currentX = minX;
+                currentZ++;
+                if (currentZ > maxZ) {
+                    finished = true;
+                    working = false;
+                    break;
+                }
+            }
         }
 
         // 回収したドロップを隣接ストレージ、または内部バッファに一括格納
@@ -273,20 +329,8 @@ public class ChunkDestroyerBlockEntity extends BlockEntity implements MenuProvid
             distributeDrops(serverLevel, pos, collectedDrops);
         }
 
-        if (blocksDestroyedThisTick > 0) {
+        if (columnsProcessed > 0) {
             setChanged();
-        }
-    }
-
-    private void advanceCursor() {
-        currentX++;
-        if (currentX > maxX) {
-            currentX = minX;
-            currentZ++;
-            if (currentZ > maxZ) {
-                currentZ = minZ;
-                currentY--;
-            }
         }
     }
 
@@ -295,6 +339,10 @@ public class ChunkDestroyerBlockEntity extends BlockEntity implements MenuProvid
 
         for (ItemStack stack : drops) {
             if (stack.isEmpty()) continue;
+
+            // 土系・石系アイテムの再チェック
+            if (voidStone && ItemFilterHelper.isStone(stack)) continue;
+            if (voidDirt && ItemFilterHelper.isDirt(stack)) continue;
 
             ItemStack remaining = stack.copy();
 
@@ -325,6 +373,18 @@ public class ChunkDestroyerBlockEntity extends BlockEntity implements MenuProvid
         for (int i = 0; i < itemHandler.getSlots(); i++) {
             ItemStack stackInSlot = itemHandler.getStackInSlot(i);
             if (stackInSlot.isEmpty()) continue;
+
+            // もし設定が切り替わって不要になった土・石があれば破棄
+            if (voidStone && ItemFilterHelper.isStone(stackInSlot)) {
+                itemHandler.setStackInSlot(i, ItemStack.EMPTY);
+                setChanged();
+                continue;
+            }
+            if (voidDirt && ItemFilterHelper.isDirt(stackInSlot)) {
+                itemHandler.setStackInSlot(i, ItemStack.EMPTY);
+                setChanged();
+                continue;
+            }
 
             ItemStack toInsert = stackInSlot.copy();
             for (IItemHandler handler : adjacentHandlers) {
@@ -376,20 +436,20 @@ public class ChunkDestroyerBlockEntity extends BlockEntity implements MenuProvid
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
         tag.put("Inventory", itemHandler.serializeNBT());
-        tag.putInt("MinX", minX);
-        tag.putInt("MaxX", maxX);
-        tag.putInt("MinY", minY);
-        tag.putInt("MaxY", maxY);
-        tag.putInt("MinZ", minZ);
-        tag.putInt("MaxZ", maxZ);
+        tag.putInt("ChunkNorth", chunkNorth);
+        tag.putInt("ChunkSouth", chunkSouth);
+        tag.putInt("ChunkWest", chunkWest);
+        tag.putInt("ChunkEast", chunkEast);
 
         tag.putInt("CurrentX", currentX);
-        tag.putInt("CurrentY", currentY);
         tag.putInt("CurrentZ", currentZ);
+        tag.putBoolean("Finished", finished);
 
         tag.putBoolean("Working", working);
         tag.putBoolean("SilkTouch", silkTouch);
         tag.putBoolean("MineLiquids", mineLiquids);
+        tag.putBoolean("VoidStone", voidStone);
+        tag.putBoolean("VoidDirt", voidDirt);
         tag.putBoolean("AreaInitialized", areaInitialized);
     }
 
@@ -399,21 +459,23 @@ public class ChunkDestroyerBlockEntity extends BlockEntity implements MenuProvid
         if (tag.contains("Inventory")) {
             itemHandler.deserializeNBT(tag.getCompound("Inventory"));
         }
-        this.minX = tag.getInt("MinX");
-        this.maxX = tag.getInt("MaxX");
-        this.minY = tag.getInt("MinY");
-        this.maxY = tag.getInt("MaxY");
-        this.minZ = tag.getInt("MinZ");
-        this.maxZ = tag.getInt("MaxZ");
+        this.chunkNorth = tag.getInt("ChunkNorth");
+        this.chunkSouth = tag.getInt("ChunkSouth");
+        this.chunkWest = tag.getInt("ChunkWest");
+        this.chunkEast = tag.getInt("ChunkEast");
 
         this.currentX = tag.getInt("CurrentX");
-        this.currentY = tag.getInt("CurrentY");
         this.currentZ = tag.getInt("CurrentZ");
+        this.finished = tag.getBoolean("Finished");
 
         this.working = tag.contains("Working") && tag.getBoolean("Working");
         this.silkTouch = !tag.contains("SilkTouch") || tag.getBoolean("SilkTouch");
         this.mineLiquids = !tag.contains("MineLiquids") || tag.getBoolean("MineLiquids");
+        this.voidStone = tag.getBoolean("VoidStone");
+        this.voidDirt = tag.getBoolean("VoidDirt");
         this.areaInitialized = tag.getBoolean("AreaInitialized");
+
+        calculateBlockBounds();
     }
 
     @Override
@@ -454,20 +516,21 @@ public class ChunkDestroyerBlockEntity extends BlockEntity implements MenuProvid
     }
 
     // ゲッター群
+    public int getChunkNorth() { return chunkNorth; }
+    public int getChunkSouth() { return chunkSouth; }
+    public int getChunkWest() { return chunkWest; }
+    public int getChunkEast() { return chunkEast; }
+
     public int getMinX() { return minX; }
     public int getMaxX() { return maxX; }
-    public int getMinY() { return minY; }
-    public int getMaxY() { return maxY; }
     public int getMinZ() { return minZ; }
     public int getMaxZ() { return maxZ; }
-
-    public int getCurrentX() { return currentX; }
-    public int getCurrentY() { return currentY; }
-    public int getCurrentZ() { return currentZ; }
 
     public boolean isWorking() { return working; }
     public boolean isSilkTouch() { return silkTouch; }
     public boolean isMineLiquids() { return mineLiquids; }
+    public boolean isVoidStone() { return voidStone; }
+    public boolean isVoidDirt() { return voidDirt; }
 
     public ItemStackHandler getItemHandler() { return itemHandler; }
 }

@@ -14,6 +14,8 @@ public class PacketToggleState {
     public static final byte ACTION_TOGGLE_SILK = 1;
     public static final byte ACTION_TOGGLE_LIQUIDS = 2;
     public static final byte ACTION_RESET_POS = 3;
+    public static final byte ACTION_TOGGLE_VOID_STONE = 4;
+    public static final byte ACTION_TOGGLE_VOID_DIRT = 5;
 
     private final BlockPos pos;
     private final byte action;
@@ -45,6 +47,8 @@ public class PacketToggleState {
                         case ACTION_TOGGLE_SILK -> destroyer.toggleSilkTouch();
                         case ACTION_TOGGLE_LIQUIDS -> destroyer.toggleLiquids();
                         case ACTION_RESET_POS -> destroyer.resetMiningCursor();
+                        case ACTION_TOGGLE_VOID_STONE -> destroyer.toggleVoidStone();
+                        case ACTION_TOGGLE_VOID_DIRT -> destroyer.toggleVoidDirt();
                     }
                 }
             }

@@ -10,6 +10,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.network.chat.Component;
@@ -19,24 +20,22 @@ import net.minecraft.world.entity.player.Inventory;
 public class ChunkDestroyerScreen extends AbstractContainerScreen<ChunkDestroyerMenu> {
     private static final ResourceLocation TEXTURE = new ResourceLocation("chunkdestroyer", "textures/gui/chunk_destroyer_gui.png");
 
-    private EditBox minXBox;
-    private EditBox maxXBox;
-    private EditBox minYBox;
-    private EditBox maxYBox;
-    private EditBox minZBox;
-    private EditBox maxZBox;
-
-    private EditBox lastFocusedBox = null;
+    private EditBox northBox;
+    private EditBox southBox;
+    private EditBox westBox;
+    private EditBox eastBox;
 
     private Button toggleWorkingBtn;
     private Button toggleSilkBtn;
     private Button toggleLiquidBtn;
+    private Button toggleVoidStoneBtn;
+    private Button toggleVoidDirtBtn;
 
     public ChunkDestroyerScreen(ChunkDestroyerMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
         this.imageWidth = 176;
-        this.imageHeight = 260;
-        this.inventoryLabelY = 166;
+        this.imageHeight = 210;
+        this.inventoryLabelY = 117;
     }
 
     @Override
@@ -48,118 +47,126 @@ public class ChunkDestroyerScreen extends AbstractContainerScreen<ChunkDestroyer
 
         ChunkDestroyerBlockEntity be = menu.getBlockEntity();
 
-        // 範囲入力 EditBox (直接キーボードで数字入力可能)
-        // X
-        minXBox = createNumericBox(x + 36, y + 20, 42, 14, be.getMinX());
-        maxXBox = createNumericBox(x + 82, y + 20, 42, 14, be.getMaxX());
+        // --- 十字方位チャンク指定 (本家AdvQuarryスタイル + キーボード直接数値入力) ---
+        // 北 (North): 上
+        this.addRenderableWidget(Button.builder(Component.literal("-"), b -> adjustBox(northBox, -getStep()))
+                .tooltip(Tooltip.create(Component.translatable("tooltip.chunkdestroyer.btn_minus_north")))
+                .bounds(x + 56, y + 17, 14, 14).build());
+        northBox = createNumericBox(x + 72, y + 17, 32, 14, be.getChunkNorth());
+        this.addRenderableWidget(northBox);
+        this.addRenderableWidget(Button.builder(Component.literal("+"), b -> adjustBox(northBox, getStep()))
+                .tooltip(Tooltip.create(Component.translatable("tooltip.chunkdestroyer.btn_plus_north")))
+                .bounds(x + 106, y + 17, 14, 14).build());
 
-        // Y
-        minYBox = createNumericBox(x + 36, y + 36, 42, 14, be.getMinY());
-        maxYBox = createNumericBox(x + 82, y + 36, 42, 14, be.getMaxY());
+        // 南 (South): 下
+        this.addRenderableWidget(Button.builder(Component.literal("-"), b -> adjustBox(southBox, -getStep()))
+                .tooltip(Tooltip.create(Component.translatable("tooltip.chunkdestroyer.btn_minus_south")))
+                .bounds(x + 56, y + 55, 14, 14).build());
+        southBox = createNumericBox(x + 72, y + 55, 32, 14, be.getChunkSouth());
+        this.addRenderableWidget(southBox);
+        this.addRenderableWidget(Button.builder(Component.literal("+"), b -> adjustBox(southBox, getStep()))
+                .tooltip(Tooltip.create(Component.translatable("tooltip.chunkdestroyer.btn_plus_south")))
+                .bounds(x + 106, y + 55, 14, 14).build());
 
-        // Z
-        minZBox = createNumericBox(x + 36, y + 52, 42, 14, be.getMinZ());
-        maxZBox = createNumericBox(x + 82, y + 52, 42, 14, be.getMaxZ());
+        // 西 (West): 左
+        this.addRenderableWidget(Button.builder(Component.literal("-"), b -> adjustBox(westBox, -getStep()))
+                .tooltip(Tooltip.create(Component.translatable("tooltip.chunkdestroyer.btn_minus_west")))
+                .bounds(x + 6, y + 36, 14, 14).build());
+        westBox = createNumericBox(x + 22, y + 36, 30, 14, be.getChunkWest());
+        this.addRenderableWidget(westBox);
+        this.addRenderableWidget(Button.builder(Component.literal("+"), b -> adjustBox(westBox, getStep()))
+                .tooltip(Tooltip.create(Component.translatable("tooltip.chunkdestroyer.btn_plus_west")))
+                .bounds(x + 54, y + 36, 14, 14).build());
 
-        this.addRenderableWidget(minXBox);
-        this.addRenderableWidget(maxXBox);
-        this.addRenderableWidget(minYBox);
-        this.addRenderableWidget(maxYBox);
-        this.addRenderableWidget(minZBox);
-        this.addRenderableWidget(maxZBox);
+        // 東 (East): 右
+        this.addRenderableWidget(Button.builder(Component.literal("-"), b -> adjustBox(eastBox, -getStep()))
+                .tooltip(Tooltip.create(Component.translatable("tooltip.chunkdestroyer.btn_minus_east")))
+                .bounds(x + 108, y + 36, 14, 14).build());
+        eastBox = createNumericBox(x + 124, y + 36, 30, 14, be.getChunkEast());
+        this.addRenderableWidget(eastBox);
+        this.addRenderableWidget(Button.builder(Component.literal("+"), b -> adjustBox(eastBox, getStep()))
+                .tooltip(Tooltip.create(Component.translatable("tooltip.chunkdestroyer.btn_plus_east")))
+                .bounds(x + 156, y + 36, 14, 14).build());
 
-        // +- 操作ボタン (クリックで現在選択中の入力欄の値を素早く増減)
-        this.addRenderableWidget(Button.builder(Component.literal("-16"), b -> adjustFocused(-16))
-                .tooltip(Tooltip.create(Component.translatable("tooltip.chunkdestroyer.btn_adjust_neg16")))
-                .bounds(x + 128, y + 20, 20, 14).build());
-        this.addRenderableWidget(Button.builder(Component.literal("-1"), b -> adjustFocused(-1))
-                .tooltip(Tooltip.create(Component.translatable("tooltip.chunkdestroyer.btn_adjust_neg1")))
-                .bounds(x + 150, y + 20, 18, 14).build());
-        this.addRenderableWidget(Button.builder(Component.literal("+1"), b -> adjustFocused(1))
-                .tooltip(Tooltip.create(Component.translatable("tooltip.chunkdestroyer.btn_adjust_pos1")))
-                .bounds(x + 128, y + 36, 18, 14).build());
-        this.addRenderableWidget(Button.builder(Component.literal("+16"), b -> adjustFocused(16))
-                .tooltip(Tooltip.create(Component.translatable("tooltip.chunkdestroyer.btn_adjust_pos16")))
-                .bounds(x + 148, y + 36, 20, 14).build());
-
-        // 範囲適用ボタン
+        // 中央: 範囲適用ボタン
         this.addRenderableWidget(Button.builder(Component.translatable("gui.chunkdestroyer.apply"), b -> sendAreaUpdate())
                 .tooltip(Tooltip.create(Component.translatable("tooltip.chunkdestroyer.btn_apply")))
-                .bounds(x + 128, y + 52, 40, 14).build());
+                .bounds(x + 72, y + 36, 32, 14).build());
 
-        // 動作切替ボタン
+        // --- 機能コントロールボタン群 ---
+        // 1段目: 稼働トグル、シルク/幸運、液体トグル
         toggleWorkingBtn = Button.builder(getWorkingButtonText(), b -> {
             ModNetwork.CHANNEL.sendToServer(new PacketToggleState(be.getBlockPos(), PacketToggleState.ACTION_TOGGLE_WORKING));
         }).tooltip(Tooltip.create(Component.translatable("tooltip.chunkdestroyer.btn_working")))
-          .bounds(x + 8, y + 70, 78, 18).build();
+          .bounds(x + 6, y + 73, 52, 14).build();
         this.addRenderableWidget(toggleWorkingBtn);
 
-        // シルクタッチ / 幸運 切替ボタン
         toggleSilkBtn = Button.builder(getSilkButtonText(), b -> {
             ModNetwork.CHANNEL.sendToServer(new PacketToggleState(be.getBlockPos(), PacketToggleState.ACTION_TOGGLE_SILK));
         }).tooltip(Tooltip.create(Component.translatable("tooltip.chunkdestroyer.btn_silk")))
-          .bounds(x + 90, y + 70, 78, 18).build();
+          .bounds(x + 61, y + 73, 54, 14).build();
         this.addRenderableWidget(toggleSilkBtn);
 
-        // 液体処理切替ボタン
         toggleLiquidBtn = Button.builder(getLiquidButtonText(), b -> {
             ModNetwork.CHANNEL.sendToServer(new PacketToggleState(be.getBlockPos(), PacketToggleState.ACTION_TOGGLE_LIQUIDS));
         }).tooltip(Tooltip.create(Component.translatable("tooltip.chunkdestroyer.btn_liquid")))
-          .bounds(x + 8, y + 92, 78, 18).build();
+          .bounds(x + 118, y + 73, 52, 14).build();
         this.addRenderableWidget(toggleLiquidBtn);
 
-        // リセットボタン
+        // 2段目: 石削除トグル、土削除トグル、採掘リセット
+        toggleVoidStoneBtn = Button.builder(getVoidStoneButtonText(), b -> {
+            ModNetwork.CHANNEL.sendToServer(new PacketToggleState(be.getBlockPos(), PacketToggleState.ACTION_TOGGLE_VOID_STONE));
+        }).tooltip(Tooltip.create(Component.translatable("tooltip.chunkdestroyer.btn_void_stone")))
+          .bounds(x + 6, y + 89, 52, 14).build();
+        this.addRenderableWidget(toggleVoidStoneBtn);
+
+        toggleVoidDirtBtn = Button.builder(getVoidDirtButtonText(), b -> {
+            ModNetwork.CHANNEL.sendToServer(new PacketToggleState(be.getBlockPos(), PacketToggleState.ACTION_TOGGLE_VOID_DIRT));
+        }).tooltip(Tooltip.create(Component.translatable("tooltip.chunkdestroyer.btn_void_dirt")))
+          .bounds(x + 61, y + 89, 54, 14).build();
+        this.addRenderableWidget(toggleVoidDirtBtn);
+
         this.addRenderableWidget(Button.builder(Component.translatable("gui.chunkdestroyer.reset"), b -> {
             ModNetwork.CHANNEL.sendToServer(new PacketToggleState(be.getBlockPos(), PacketToggleState.ACTION_RESET_POS));
         }).tooltip(Tooltip.create(Component.translatable("tooltip.chunkdestroyer.btn_reset")))
-          .bounds(x + 90, y + 92, 78, 18).build());
+          .bounds(x + 118, y + 89, 52, 14).build());
+    }
+
+    private int getStep() {
+        return Screen.hasShiftDown() ? 16 : 1;
     }
 
     private EditBox createNumericBox(int x, int y, int width, int height, int initialValue) {
         EditBox box = new EditBox(this.font, x, y, width, height, Component.literal(""));
         box.setValue(String.valueOf(initialValue));
-        box.setFilter(text -> text.isEmpty() || text.equals("-") || text.matches("^-?\\d+$"));
+        box.setFilter(text -> text.isEmpty() || text.matches("^\\d+$"));
         return box;
     }
 
-    private void adjustFocused(int delta) {
-        EditBox target = lastFocusedBox != null ? lastFocusedBox : maxXBox;
+    private void adjustBox(EditBox box, int delta) {
         try {
-            int current = Integer.parseInt(target.getValue());
-            target.setValue(String.valueOf(current + delta));
+            int current = Integer.parseInt(box.getValue().isEmpty() ? "0" : box.getValue());
+            int newVal = Math.max(0, current + delta);
+            box.setValue(String.valueOf(newVal));
             sendAreaUpdate();
         } catch (NumberFormatException ignored) {}
     }
 
     private void sendAreaUpdate() {
         try {
-            int minX = Integer.parseInt(minXBox.getValue());
-            int maxX = Integer.parseInt(maxXBox.getValue());
-            int minY = Integer.parseInt(minYBox.getValue());
-            int maxY = Integer.parseInt(maxYBox.getValue());
-            int minZ = Integer.parseInt(minZBox.getValue());
-            int maxZ = Integer.parseInt(maxZBox.getValue());
+            int north = Integer.parseInt(northBox.getValue().isEmpty() ? "0" : northBox.getValue());
+            int south = Integer.parseInt(southBox.getValue().isEmpty() ? "0" : southBox.getValue());
+            int west = Integer.parseInt(westBox.getValue().isEmpty() ? "0" : westBox.getValue());
+            int east = Integer.parseInt(eastBox.getValue().isEmpty() ? "0" : eastBox.getValue());
 
             ChunkDestroyerBlockEntity be = menu.getBlockEntity();
-            ModNetwork.CHANNEL.sendToServer(new PacketUpdateArea(be.getBlockPos(), minX, maxX, minY, maxY, minZ, maxZ));
+            ModNetwork.CHANNEL.sendToServer(new PacketUpdateArea(be.getBlockPos(), north, south, west, east));
         } catch (NumberFormatException ignored) {}
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (minXBox.isMouseOver(mouseX, mouseY)) lastFocusedBox = minXBox;
-        else if (maxXBox.isMouseOver(mouseX, mouseY)) lastFocusedBox = maxXBox;
-        else if (minYBox.isMouseOver(mouseX, mouseY)) lastFocusedBox = minYBox;
-        else if (maxYBox.isMouseOver(mouseX, mouseY)) lastFocusedBox = maxYBox;
-        else if (minZBox.isMouseOver(mouseX, mouseY)) lastFocusedBox = minZBox;
-        else if (maxZBox.isMouseOver(mouseX, mouseY)) lastFocusedBox = maxZBox;
-
-        return super.mouseClicked(mouseX, mouseY, button);
-    }
-
-    @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == 257 || keyCode == 335) { // Enter or Keypad Enter
+        if (keyCode == 257 || keyCode == 335) { // Enter
             sendAreaUpdate();
             return true;
         }
@@ -184,6 +191,18 @@ public class ChunkDestroyerScreen extends AbstractContainerScreen<ChunkDestroyer
                 : Component.translatable("gui.chunkdestroyer.liquid_keep");
     }
 
+    private Component getVoidStoneButtonText() {
+        return menu.isVoidStone()
+                ? Component.translatable("gui.chunkdestroyer.void_stone_on")
+                : Component.translatable("gui.chunkdestroyer.void_stone_off");
+    }
+
+    private Component getVoidDirtButtonText() {
+        return menu.isVoidDirt()
+                ? Component.translatable("gui.chunkdestroyer.void_dirt_on")
+                : Component.translatable("gui.chunkdestroyer.void_dirt_off");
+    }
+
     @Override
     protected void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
         RenderSystem.setShader(GameRenderer::getPositionTexShader);
@@ -197,23 +216,23 @@ public class ChunkDestroyerScreen extends AbstractContainerScreen<ChunkDestroyer
 
     @Override
     protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        guiGraphics.drawString(this.font, this.title, 8, 6, 0x404040, false);
+        // タイトル
+        guiGraphics.drawString(this.font, this.title, 6, 6, 0x404040, false);
 
+        // 状態インジケータ (右上に表示)
         Component statusComponent = menu.isWorking()
                 ? Component.translatable("gui.chunkdestroyer.status_running")
                 : Component.translatable("gui.chunkdestroyer.status_stopped");
         int statusColor = menu.isWorking() ? 0x228B22 : 0xB22222;
-        guiGraphics.drawString(this.font, statusComponent, 105, 6, statusColor, false);
+        guiGraphics.drawString(this.font, statusComponent, 130, 6, statusColor, false);
 
-        guiGraphics.drawString(this.font, "X:", 8, 23, 0x404040, false);
-        guiGraphics.drawString(this.font, "~", 80, 23, 0x404040, false);
+        // 方位ラベル (N, S, W, E)
+        guiGraphics.drawString(this.font, "N", 84, 8, 0x404040, false);
+        guiGraphics.drawString(this.font, "S", 84, 48, 0x404040, false);
+        guiGraphics.drawString(this.font, "W", 34, 26, 0x404040, false);
+        guiGraphics.drawString(this.font, "E", 136, 26, 0x404040, false);
 
-        guiGraphics.drawString(this.font, "Y:", 8, 39, 0x404040, false);
-        guiGraphics.drawString(this.font, "~", 80, 39, 0x404040, false);
-
-        guiGraphics.drawString(this.font, "Z:", 8, 55, 0x404040, false);
-        guiGraphics.drawString(this.font, "~", 80, 55, 0x404040, false);
-
+        // インベントリラベル
         guiGraphics.drawString(this.font, this.playerInventoryTitle, 8, this.inventoryLabelY, 0x404040, false);
     }
 
@@ -222,6 +241,8 @@ public class ChunkDestroyerScreen extends AbstractContainerScreen<ChunkDestroyer
         if (toggleWorkingBtn != null) toggleWorkingBtn.setMessage(getWorkingButtonText());
         if (toggleSilkBtn != null) toggleSilkBtn.setMessage(getSilkButtonText());
         if (toggleLiquidBtn != null) toggleLiquidBtn.setMessage(getLiquidButtonText());
+        if (toggleVoidStoneBtn != null) toggleVoidStoneBtn.setMessage(getVoidStoneButtonText());
+        if (toggleVoidDirtBtn != null) toggleVoidDirtBtn.setMessage(getVoidDirtButtonText());
 
         this.renderBackground(guiGraphics);
         super.render(guiGraphics, mouseX, mouseY, partialTick);

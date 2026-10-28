@@ -11,41 +11,33 @@ import java.util.function.Supplier;
 
 public class PacketUpdateArea {
     private final BlockPos pos;
-    private final int minX;
-    private final int maxX;
-    private final int minY;
-    private final int maxY;
-    private final int minZ;
-    private final int maxZ;
+    private final int chunkNorth;
+    private final int chunkSouth;
+    private final int chunkWest;
+    private final int chunkEast;
 
-    public PacketUpdateArea(BlockPos pos, int minX, int maxX, int minY, int maxY, int minZ, int maxZ) {
+    public PacketUpdateArea(BlockPos pos, int chunkNorth, int chunkSouth, int chunkWest, int chunkEast) {
         this.pos = pos;
-        this.minX = minX;
-        this.maxX = maxX;
-        this.minY = minY;
-        this.maxY = maxY;
-        this.minZ = minZ;
-        this.maxZ = maxZ;
+        this.chunkNorth = chunkNorth;
+        this.chunkSouth = chunkSouth;
+        this.chunkWest = chunkWest;
+        this.chunkEast = chunkEast;
     }
 
     public PacketUpdateArea(FriendlyByteBuf buf) {
         this.pos = buf.readBlockPos();
-        this.minX = buf.readInt();
-        this.maxX = buf.readInt();
-        this.minY = buf.readInt();
-        this.maxY = buf.readInt();
-        this.minZ = buf.readInt();
-        this.maxZ = buf.readInt();
+        this.chunkNorth = buf.readInt();
+        this.chunkSouth = buf.readInt();
+        this.chunkWest = buf.readInt();
+        this.chunkEast = buf.readInt();
     }
 
     public void toBytes(FriendlyByteBuf buf) {
         buf.writeBlockPos(this.pos);
-        buf.writeInt(this.minX);
-        buf.writeInt(this.maxX);
-        buf.writeInt(this.minY);
-        buf.writeInt(this.maxY);
-        buf.writeInt(this.minZ);
-        buf.writeInt(this.maxZ);
+        buf.writeInt(this.chunkNorth);
+        buf.writeInt(this.chunkSouth);
+        buf.writeInt(this.chunkWest);
+        buf.writeInt(this.chunkEast);
     }
 
     public void handle(Supplier<NetworkEvent.Context> ctxSupplier) {
@@ -55,7 +47,7 @@ public class PacketUpdateArea {
             if (player != null && player.level().isLoaded(pos)) {
                 BlockEntity be = player.level().getBlockEntity(pos);
                 if (be instanceof ChunkDestroyerBlockEntity destroyer) {
-                    destroyer.setMiningArea(minX, maxX, minY, maxY, minZ, maxZ);
+                    destroyer.setChunkRange(chunkNorth, chunkSouth, chunkWest, chunkEast);
                 }
             }
         });
