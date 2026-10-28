@@ -16,7 +16,7 @@ public class ChunkDestroyerMenu extends AbstractContainerMenu {
     private final ContainerData data;
 
     public ChunkDestroyerMenu(int containerId, Inventory playerInventory, FriendlyByteBuf extraData) {
-        this(containerId, playerInventory, playerInventory.player.level().getBlockEntity(extraData.readBlockPos()), new SimpleContainerData(10));
+        this(containerId, playerInventory, playerInventory.player.level().getBlockEntity(extraData.readBlockPos()), new SimpleContainerData(12));
     }
 
     public ChunkDestroyerMenu(int containerId, Inventory playerInventory, BlockEntity entity, ContainerData data) {
@@ -89,6 +89,14 @@ public class ChunkDestroyerMenu extends AbstractContainerMenu {
 
     public int getProgress() {
         return this.data.get(9);
+    }
+
+    public boolean hasPendingItems() {
+        return this.data.get(10) != 0;
+    }
+
+    public int getPendingTotalCount() {
+        return this.data.get(11);
     }
 
     @Override

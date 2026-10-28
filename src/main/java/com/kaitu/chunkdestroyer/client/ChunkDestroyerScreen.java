@@ -226,6 +226,12 @@ public class ChunkDestroyerScreen extends AbstractContainerScreen<ChunkDestroyer
         int statusColor = menu.isWorking() ? 0x228B22 : 0xB22222;
         guiGraphics.drawString(this.font, statusComponent, 130, 6, statusColor, false);
 
+        // 仮置きストレージのアイテム表示
+        if (menu.hasPendingItems()) {
+            Component pendingComponent = Component.translatable("gui.chunkdestroyer.pending", menu.getPendingTotalCount());
+            guiGraphics.drawString(this.font, pendingComponent, 6, 20, 0xC0392B, false);
+        }
+
         // 方位ラベル (N, S, W, E)
         guiGraphics.drawString(this.font, "N", 84, 8, 0x404040, false);
         guiGraphics.drawString(this.font, "S", 84, 48, 0x404040, false);
@@ -238,7 +244,14 @@ public class ChunkDestroyerScreen extends AbstractContainerScreen<ChunkDestroyer
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        if (toggleWorkingBtn != null) toggleWorkingBtn.setMessage(getWorkingButtonText());
+        if (toggleWorkingBtn != null) {
+            toggleWorkingBtn.setMessage(getWorkingButtonText());
+            if (!menu.isWorking() && menu.hasPendingItems()) {
+                toggleWorkingBtn.setTooltip(Tooltip.create(Component.translatable("tooltip.chunkdestroyer.btn_working_blocked")));
+            } else {
+                toggleWorkingBtn.setTooltip(Tooltip.create(Component.translatable("tooltip.chunkdestroyer.btn_working")));
+            }
+        }
         if (toggleSilkBtn != null) toggleSilkBtn.setMessage(getSilkButtonText());
         if (toggleLiquidBtn != null) toggleLiquidBtn.setMessage(getLiquidButtonText());
         if (toggleVoidStoneBtn != null) toggleVoidStoneBtn.setMessage(getVoidStoneButtonText());

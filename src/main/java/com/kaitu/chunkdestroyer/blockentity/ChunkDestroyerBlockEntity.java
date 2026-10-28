@@ -7,17 +7,21 @@ import com.kaitu.chunkdestroyer.menu.ChunkDestroyerMenu;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.Connection;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerData;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantments;
@@ -36,6 +40,7 @@ import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.ItemHandlerHelper;
 import net.minecraftforge.items.ItemStackHandler;
+import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -53,6 +58,10 @@ public class ChunkDestroyerBlockEntity extends BlockEntity implements MenuProvid
         }
     };
     private final LazyOptional<IItemHandler> itemHandlerOptional = LazyOptional.of(() -> itemHandler);
+
+    // 仮置きストレージ (インベントリが埋まっている場合の無限仮置きバッファ)
+    // ※仮置きが存在する場合、新規に採掘を開始することはできない（すでに開始されている採掘には影響しない）
+    private final List<ItemStack> pendingBuffer = new ArrayList<>();
 
     // チャンク指定 (設置チャンクを基準とした各方位への拡張チャンク数: 0 = 設置チャンクのみ)
     private int chunkNorth = 0;
@@ -81,7 +90,7 @@ public class ChunkDestroyerBlockEntity extends BlockEntity implements MenuProvid
     private boolean voidDirt = false;
     private boolean areaInitialized = false;
 
-    // GUI同期データ (10スロット)
+    // GUI同期データ (12スロット)
     protected final ContainerData dataAccess = new ContainerData() {
         @Override
         public int get(int index) {
@@ -96,6 +105,8 @@ public class ChunkDestroyerBlockEntity extends BlockEntity implements MenuProvid
                 case 7 -> chunkWest;
                 case 8 -> chunkEast;
                 case 9 -> finished ? 100 : calculateProgress();
+                case 10 -> hasPendingItems() ? 1 : 0;
+                case 11 -> getPendingTotalCount();
                 default -> 0;
             };
         }
@@ -117,7 +128,7 @@ public class ChunkDestroyerBlockEntity extends BlockEntity implements MenuProvid
 
         @Override
         public int getCount() {
-            return 10;
+            return 12;
         }
     };
 
@@ -173,11 +184,32 @@ public class ChunkDestroyerBlockEntity extends BlockEntity implements MenuProvid
         syncToClient();
     }
 
-    public void toggleWorking() {
-        this.working = !this.working;
-        if (this.working) {
-            this.finished = false;
+    public boolean hasPendingItems() {
+        return !pendingBuffer.isEmpty();
+    }
+
+    public int getPendingTotalCount() {
+        int count = 0;
+        for (ItemStack stack : pendingBuffer) {
+            count += stack.getCount();
         }
+        return count;
+    }
+
+    public boolean toggleWorking() {
+        if (!this.working) {
+            // 新規に採掘を開始しようとしている場合: 仮置きアイテムが存在すれば開始できない！
+            if (hasPendingItems()) {
+                syncToClient();
+                return false;
+            }
+            this.working = true;
+            this.finished = false;
+        } else {
+            // すでに稼働している場合はいつでも停止可能
+            this.working = false;
+        }
+
         if (level != null && !level.isClientSide) {
             BlockState state = getBlockState();
             if (state.hasProperty(ChunkDestroyerBlock.WORKING) && state.getValue(ChunkDestroyerBlock.WORKING) != this.working) {
@@ -186,6 +218,7 @@ public class ChunkDestroyerBlockEntity extends BlockEntity implements MenuProvid
         }
         setChanged();
         syncToClient();
+        return true;
     }
 
     public void toggleSilkTouch() {
@@ -225,13 +258,21 @@ public class ChunkDestroyerBlockEntity extends BlockEntity implements MenuProvid
 
     /**
      * 本家チャンクデストロイヤー仕様: 垂直柱 (X, Z の全Yブロック) を一括掘削
+     * パフォーマンス改善:
+     * - アイテム化 (popResource / ItemEntity) を完全撤廃
+     * - インベントリ満杯時は「仮置きストレージ」へ保持
+     * - ストレージに空きができたら自動で仮置きから優先搬出
      */
     private void tickServer(ServerLevel serverLevel, BlockPos pos, BlockState state) {
         ensureAreaInitialized();
 
-        // 内部バッファのアイテムを隣接チェストへ排出
+        // 1. 仮置きストレージ内のアイテムを隣接チェストおよび内部バッファへ優先排出
+        flushPendingBuffer(serverLevel, pos);
+
+        // 2. 内部バッファのアイテムを隣接チェストへ排出
         pushInternalBufferToAdjacentStorage(serverLevel, pos);
 
+        // 停止中または採掘完了時
         if (!working || finished) {
             if (state.getValue(ChunkDestroyerBlock.WORKING)) {
                 serverLevel.setBlock(pos, state.setValue(ChunkDestroyerBlock.WORKING, false), 3);
@@ -243,8 +284,7 @@ public class ChunkDestroyerBlockEntity extends BlockEntity implements MenuProvid
             serverLevel.setBlock(pos, state.setValue(ChunkDestroyerBlock.WORKING, true), 3);
         }
 
-        // デフォルトでアップグレード最大搭載速度 (1tickあたり処理する垂直列数)
-        // 1列あたり約100〜380ブロック存在するため、例えば16列で数千ブロックを一瞬で破壊！
+        // デフォルトでアップグレード最大搭載速度
         int columnsPerTick = Math.max(1, ModConfig.COMMON.blocksPerTick.get() / 4);
         boolean allowBedrock = ModConfig.COMMON.mineBedrock.get();
         boolean removeFluidsConfig = ModConfig.COMMON.removeFluids.get() && this.mineLiquids;
@@ -263,11 +303,10 @@ public class ChunkDestroyerBlockEntity extends BlockEntity implements MenuProvid
         BlockPos.MutableBlockPos columnPos = new BlockPos.MutableBlockPos();
 
         while (columnsProcessed < columnsPerTick && !finished) {
-            // (currentX, currentZ) の垂直柱を Y最上段からY最下層まで一括採掘！
+            // (currentX, currentZ) の垂直柱を一括採掘
             for (int y = maxY; y >= minY; y--) {
                 columnPos.set(currentX, y, currentZ);
 
-                // 自身の位置は掘らない
                 if (columnPos.equals(pos) || !serverLevel.isLoaded(columnPos)) {
                     continue;
                 }
@@ -293,17 +332,12 @@ public class ChunkDestroyerBlockEntity extends BlockEntity implements MenuProvid
 
                         List<ItemStack> drops = targetState.getDrops(lootBuilder);
                         for (ItemStack drop : drops) {
-                            // 土系・石系アイテムの削除 (Void) 判定
-                            if (voidStone && ItemFilterHelper.isStone(drop)) {
-                                continue;
-                            }
-                            if (voidDirt && ItemFilterHelper.isDirt(drop)) {
-                                continue;
-                            }
-                            collectedDrops.add(drop);
+                            if (voidStone && ItemFilterHelper.isStone(drop)) continue;
+                            if (voidDirt && ItemFilterHelper.isDirt(drop)) continue;
+                            mergeIntoList(collectedDrops, drop);
                         }
 
-                        // ブロックを空気に置換 (フラグ2: UPDATE_CLIENTS のみで連鎖更新を防止)
+                        // ブロックを空気に置換 (フラグ2: UPDATE_CLIENTS のみで近傍更新連鎖を防止)
                         serverLevel.setBlock(columnPos, Blocks.AIR.defaultBlockState(), 2);
                     }
                 }
@@ -311,7 +345,6 @@ public class ChunkDestroyerBlockEntity extends BlockEntity implements MenuProvid
 
             columnsProcessed++;
 
-            // 次の (X, Z) 柱へ進む
             currentX++;
             if (currentX > maxX) {
                 currentX = minX;
@@ -324,7 +357,7 @@ public class ChunkDestroyerBlockEntity extends BlockEntity implements MenuProvid
             }
         }
 
-        // 回収したドロップを隣接ストレージ、または内部バッファに一括格納
+        // 回収したドロップをストレージに格納 (溢れた分は仮置きストレージへ)
         if (!collectedDrops.isEmpty()) {
             distributeDrops(serverLevel, pos, collectedDrops);
         }
@@ -334,19 +367,29 @@ public class ChunkDestroyerBlockEntity extends BlockEntity implements MenuProvid
         }
     }
 
+    private void mergeIntoList(List<ItemStack> list, ItemStack stack) {
+        if (stack.isEmpty()) return;
+        for (ItemStack existing : list) {
+            if (ItemHandlerHelper.canItemStacksStack(existing, stack)) {
+                existing.grow(stack.getCount());
+                return;
+            }
+        }
+        list.add(stack.copy());
+    }
+
     private void distributeDrops(ServerLevel level, BlockPos pos, List<ItemStack> drops) {
         List<IItemHandler> adjacentHandlers = getAdjacentItemHandlers(level, pos);
 
         for (ItemStack stack : drops) {
             if (stack.isEmpty()) continue;
 
-            // 土系・石系アイテムの再チェック
             if (voidStone && ItemFilterHelper.isStone(stack)) continue;
             if (voidDirt && ItemFilterHelper.isDirt(stack)) continue;
 
             ItemStack remaining = stack.copy();
 
-            // 1. 隣接ストレージへの格納を試行
+            // 1. 隣接ストレージへの格納
             for (IItemHandler handler : adjacentHandlers) {
                 remaining = ItemHandlerHelper.insertItemStacked(handler, remaining, false);
                 if (remaining.isEmpty()) {
@@ -354,15 +397,81 @@ public class ChunkDestroyerBlockEntity extends BlockEntity implements MenuProvid
                 }
             }
 
-            // 2. 残った分は自身の内部バッファに格納
+            // 2. 内部バッファへの格納
             if (!remaining.isEmpty()) {
                 remaining = ItemHandlerHelper.insertItemStacked(this.itemHandler, remaining, false);
             }
 
-            // 3. それでも溢れた場合は機械の直上に安全にドロップ
+            // 3. パフォーマンス改善: アイテム化せず、仮置きストレージへ格納！
             if (!remaining.isEmpty()) {
-                Block.popResource(level, pos.above(), remaining);
+                addToPendingBuffer(remaining);
             }
+        }
+    }
+
+    private void addToPendingBuffer(ItemStack stack) {
+        if (stack.isEmpty()) return;
+        for (ItemStack existing : pendingBuffer) {
+            if (ItemHandlerHelper.canItemStacksStack(existing, stack)) {
+                existing.grow(stack.getCount());
+                setChanged();
+                return;
+            }
+        }
+        pendingBuffer.add(stack.copy());
+        setChanged();
+    }
+
+    private void flushPendingBuffer(ServerLevel level, BlockPos pos) {
+        if (pendingBuffer.isEmpty()) return;
+
+        List<IItemHandler> adjacentHandlers = getAdjacentItemHandlers(level, pos);
+        boolean changed = false;
+
+        for (int i = pendingBuffer.size() - 1; i >= 0; i--) {
+            ItemStack stack = pendingBuffer.get(i);
+            if (stack.isEmpty()) {
+                pendingBuffer.remove(i);
+                changed = true;
+                continue;
+            }
+
+            if (voidStone && ItemFilterHelper.isStone(stack)) {
+                pendingBuffer.remove(i);
+                changed = true;
+                continue;
+            }
+            if (voidDirt && ItemFilterHelper.isDirt(stack)) {
+                pendingBuffer.remove(i);
+                changed = true;
+                continue;
+            }
+
+            ItemStack remaining = stack;
+
+            // 1. 隣接ストレージへ搬出
+            for (IItemHandler handler : adjacentHandlers) {
+                remaining = ItemHandlerHelper.insertItemStacked(handler, remaining, false);
+                if (remaining.isEmpty()) break;
+            }
+
+            // 2. 内部バッファへ搬出
+            if (!remaining.isEmpty()) {
+                remaining = ItemHandlerHelper.insertItemStacked(this.itemHandler, remaining, false);
+            }
+
+            if (remaining.isEmpty()) {
+                pendingBuffer.remove(i);
+                changed = true;
+            } else if (remaining.getCount() != stack.getCount()) {
+                pendingBuffer.set(i, remaining);
+                changed = true;
+            }
+        }
+
+        if (changed) {
+            setChanged();
+            syncToClient();
         }
     }
 
@@ -374,7 +483,6 @@ public class ChunkDestroyerBlockEntity extends BlockEntity implements MenuProvid
             ItemStack stackInSlot = itemHandler.getStackInSlot(i);
             if (stackInSlot.isEmpty()) continue;
 
-            // もし設定が切り替わって不要になった土・石があれば破棄
             if (voidStone && ItemFilterHelper.isStone(stackInSlot)) {
                 itemHandler.setStackInSlot(i, ItemStack.EMPTY);
                 setChanged();
@@ -436,6 +544,25 @@ public class ChunkDestroyerBlockEntity extends BlockEntity implements MenuProvid
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
         tag.put("Inventory", itemHandler.serializeNBT());
+
+        // 仮置きストレージのNBT保存 (無限スタック数対応)
+        ListTag pendingTag = new ListTag();
+        for (ItemStack stack : pendingBuffer) {
+            if (!stack.isEmpty()) {
+                CompoundTag itemTag = new CompoundTag();
+                ResourceLocation key = ForgeRegistries.ITEMS.getKey(stack.getItem());
+                if (key != null) {
+                    itemTag.putString("id", key.toString());
+                    itemTag.putInt("count", stack.getCount());
+                    if (stack.hasTag()) {
+                        itemTag.put("tag", stack.getTag().copy());
+                    }
+                    pendingTag.add(itemTag);
+                }
+            }
+        }
+        tag.put("PendingBuffer", pendingTag);
+
         tag.putInt("ChunkNorth", chunkNorth);
         tag.putInt("ChunkSouth", chunkSouth);
         tag.putInt("ChunkWest", chunkWest);
@@ -459,6 +586,26 @@ public class ChunkDestroyerBlockEntity extends BlockEntity implements MenuProvid
         if (tag.contains("Inventory")) {
             itemHandler.deserializeNBT(tag.getCompound("Inventory"));
         }
+
+        // 仮置きストレージのNBT読み込み
+        pendingBuffer.clear();
+        if (tag.contains("PendingBuffer", Tag.TAG_LIST)) {
+            ListTag pendingTag = tag.getList("PendingBuffer", Tag.TAG_COMPOUND);
+            for (int i = 0; i < pendingTag.size(); i++) {
+                CompoundTag itemTag = pendingTag.getCompound(i);
+                Item item = ForgeRegistries.ITEMS.getValue(new ResourceLocation(itemTag.getString("id")));
+                if (item != null && item != Items.AIR) {
+                    int count = itemTag.getInt("count");
+                    ItemStack stack = new ItemStack(item, Math.min(count, 64));
+                    stack.setCount(count); // 大容量カウント
+                    if (itemTag.contains("tag", Tag.TAG_COMPOUND)) {
+                        stack.setTag(itemTag.getCompound("tag"));
+                    }
+                    pendingBuffer.add(stack);
+                }
+            }
+        }
+
         this.chunkNorth = tag.getInt("ChunkNorth");
         this.chunkSouth = tag.getInt("ChunkSouth");
         this.chunkWest = tag.getInt("ChunkWest");
@@ -533,4 +680,5 @@ public class ChunkDestroyerBlockEntity extends BlockEntity implements MenuProvid
     public boolean isVoidDirt() { return voidDirt; }
 
     public ItemStackHandler getItemHandler() { return itemHandler; }
+    public List<ItemStack> getPendingBuffer() { return pendingBuffer; }
 }

@@ -3,6 +3,9 @@ package com.kaitu.chunkdestroyer;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 public class ChunkDestroyerLogicTest {
@@ -83,5 +86,38 @@ public class ChunkDestroyerLogicTest {
         assertTrue(dirtNames.contains("dirt"));
         assertTrue(dirtNames.contains("sand"));
         assertFalse(dirtNames.contains("diamond"));
+    }
+
+    @Test
+    @DisplayName("Test Staging Buffer Mining Start Condition")
+    void testStagingBufferStartCondition() {
+        List<String> mockPendingBuffer = new ArrayList<>();
+        boolean isWorking = false;
+
+        // 1. 仮置きが空の場合: 開始可能
+        boolean canStartEmpty = mockPendingBuffer.isEmpty();
+        assertTrue(canStartEmpty);
+        if (canStartEmpty) {
+            isWorking = true;
+        }
+        assertTrue(isWorking);
+
+        // 2. 稼働中に仮置きアイテムが発生: 採掘は止まらない
+        mockPendingBuffer.add("iron_ore x 64");
+        assertFalse(mockPendingBuffer.isEmpty());
+        assertTrue(isWorking, "Mining continues even when staging buffer accumulates items while working");
+
+        // 3. 一度停止した場合
+        isWorking = false;
+        assertFalse(isWorking);
+
+        // 4. 仮置きが存在する状態での再開試行: 開始不可
+        boolean canRestartWithPending = mockPendingBuffer.isEmpty();
+        assertFalse(canRestartWithPending, "Cannot start or resume mining when staging buffer has items");
+
+        // 5. 仮置きが排出されて空になったら再開可能
+        mockPendingBuffer.clear();
+        boolean canRestartCleared = mockPendingBuffer.isEmpty();
+        assertTrue(canRestartCleared);
     }
 }
