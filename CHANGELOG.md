@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.1.2-beta] - 2026-11-09
+
+### 日本語 (Japanese)
+- **ブロックの破壊・ドロップ修正**:
+  - ピッケルで採掘できない／破壊してもドロップしない問題を修正（`mineable/pickaxe`・`needs_stone_tool` タグとルートテーブルを追加）。
+  - 内部インベントリ・仮置きアイテム・チャンク範囲・各トグル設定をアイテムのNBTに保存。破壊時にアイテムを撒き散らさず、再設置で復元されます（稼働状態は引き継ぎません）。
+- **採掘完了後の再開修正**: 採掘完了後に開始ボタンを押すと、範囲の先頭から再開するよう変更（Z方向に範囲がずれて広がる問題を修正）。
+- **範囲外ブロックの撤去修正**: 範囲内の未ロードチャンクを読み飛ばさず、読み込んで撤去するよう修正。
+
+### English
+- **Block Break & Drop Fix**:
+  - Fixed the block being unbreakable with a pickaxe / dropping nothing (added `mineable/pickaxe` and `needs_stone_tool` tags and a loot table).
+  - Internal inventory, staging buffer, chunk range and toggle settings are saved into the item NBT. Nothing is scattered on break, and everything is restored when placed again (working state is not carried over).
+- **Restart After Completion Fix**: Pressing Start after a finished run now restarts from the beginning of the area (fixes the area drifting along the Z axis).
+- **Out-of-Chunk Block Removal Fix**: Unloaded chunks inside the area are now loaded and mined instead of being skipped.
+
+---
+
 ## [1.1.1-beta] - 2026-10-28
 
 ### 日本語 (Japanese)

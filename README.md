@@ -2,7 +2,7 @@
 
 [![Minecraft 1.20.1](https://img.shields.io/badge/Minecraft-1.20.1-brightgreen.svg)](https://minecraft.net/)
 [![Forge](https://img.shields.io/badge/Forge-47.3.0+-orange.svg)](https://files.minecraftforge.net/)
-[![Release: Beta](https://img.shields.io/badge/Release-Beta%20(v1.1.1)--beta-blueviolet.svg)](https://github.com/kaitu710-7878/standalone-chunk-destroyer/releases)
+[![Release: Beta](https://img.shields.io/badge/Release-Beta%20(v1.1.2)--beta-blueviolet.svg)](https://github.com/kaitu710-7878/standalone-chunk-destroyer/releases)
 [![License: GPL-3.0 or LGPL-3.0](https://img.shields.io/badge/License-GPL--3.0%20%7C%20LGPL--3.0-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
 
 ---
@@ -11,7 +11,7 @@
 
 ### 概要
 **Standalone Chunk Destroyer** は、dditional-enchanted-miner（QuarryPlus / Kotori316氏作）の「チャンクデストロイヤー（AdvQuarry）」をベースに、前提MOD（scalable-cats-force 等）への依存を完全に排除し、単体で動作するよう最適化・機能拡張された独立MODです。
-最新の **Beta版（v1.1.1-beta）** では、アイテムのドロップ化によるサーバーラグを完全根絶する**「無限仮置きストレージシステム」**と**「安全な採掘開始制限」**に加え、**256pxワイドUI（中央十字チャンク指定・右側ボタン群・左側ステータス表示）**を搭載しています。
+最新の **Beta版（v1.1.2-beta）** では、アイテムのドロップ化によるサーバーラグを完全根絶する**「無限仮置きストレージシステム」**と**「安全な採掘開始制限」**に加え、**256pxワイドUI（中央十字チャンク指定・右側ボタン群・左側ステータス表示）**を搭載しています。
 
 ### 主な特徴
 1. **256pxワイドGUI＆最適化レイアウト (Wide GUI & Ergonomic Layout)**
@@ -55,7 +55,7 @@
 
 ### 導入方法
 1. Minecraft 1.20.1 および Minecraft Forge（47.3.0以上推奨）をインストールします。
-2. [Releases](../../releases) からビルド済みJARファイル（chunkdestroyer-1.1.1-beta.jar）をダウンロードします。
+2. [Releases](../../releases) からビルド済みJARファイル（chunkdestroyer-1.1.2-beta.jar）をダウンロードします。
 3. ダウンロードしたJARファイルを .minecraft/mods フォルダに配置します。
 
 ---
@@ -64,7 +64,7 @@
 
 ### Overview
 **Standalone Chunk Destroyer** is a standalone, performance-optimized reimplementation of the Chunk Destroyer (AdvQuarry) from dditional-enchanted-miner (QuarryPlus by Kotori316).
-In this **Beta release (v1.1.1-beta)**, it introduces a **256px Wide GUI Layout** (Left: Status/Buffer, Center: Cross Chunk Controls with no overlaps, Right: Action Buttons), alongside the **Infinite Staging Buffer system** and **Safe Mining Start Gate**.
+In this **Beta release (v1.1.2-beta)**, it introduces a **256px Wide GUI Layout** (Left: Status/Buffer, Center: Cross Chunk Controls with no overlaps, Right: Action Buttons), alongside the **Infinite Staging Buffer system** and **Safe Mining Start Gate**.
 
 ### Key Features
 1. **256px Wide Screen & Ergonomic UI Layout**
@@ -103,5 +103,5 @@ In this **Beta release (v1.1.1-beta)**, it introduces a **256px Wide GUI Layout*
 
 ### Installation
 1. Install Minecraft 1.20.1 and Minecraft Forge (47.3.0+).
-2. Download the latest compiled JAR (chunkdestroyer-1.1.1-beta.jar) from the [Releases](../../releases) tab.
+2. Download the latest compiled JAR (chunkdestroyer-1.1.2-beta.jar) from the [Releases](../../releases) tab.
 3. Place the JAR file into your .minecraft/mods directory.

@@ -203,6 +203,10 @@ public class ChunkDestroyerBlockEntity extends BlockEntity implements MenuProvid
                 syncToClient();
                 return false;
             }
+            // 以前に完了していた場合はカーソルをリセットして範囲先頭から再開
+            if (finished) {
+                resetMiningCursor();
+            }
             this.working = true;
             this.finished = false;
         } else {
@@ -307,7 +311,7 @@ public class ChunkDestroyerBlockEntity extends BlockEntity implements MenuProvid
             for (int y = maxY; y >= minY; y--) {
                 columnPos.set(currentX, y, currentZ);
 
-                if (columnPos.equals(pos) || !serverLevel.isLoaded(columnPos)) {
+                if (columnPos.equals(pos)) {
                     continue;
                 }
 

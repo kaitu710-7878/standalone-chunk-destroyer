@@ -101,16 +101,9 @@ public class ChunkDestroyerBlock extends BaseEntityBlock {
 
     @Override
     public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
+        // 内部インベントリ・仮置きはルートテーブルのcopy_nbtでアイテムのNBTに保存されるため、
+        // ここではアイテムを撒き散らさない。
         if (state.getBlock() != newState.getBlock()) {
-            BlockEntity be = level.getBlockEntity(pos);
-            if (be instanceof ChunkDestroyerBlockEntity destroyer) {
-                for (int i = 0; i < destroyer.getItemHandler().getSlots(); i++) {
-                    ItemStack stack = destroyer.getItemHandler().getStackInSlot(i);
-                    if (!stack.isEmpty()) {
-                        popResource(level, pos, stack);
-                    }
-                }
-            }
             super.onRemove(state, level, pos, newState, isMoving);
         }
     }

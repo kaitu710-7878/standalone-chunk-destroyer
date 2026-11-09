@@ -1,0 +1,36 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "rolls": 1.0,
+      "bonus_rolls": 0.0,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "chunkdestroyer:chunk_destroyer",
+          "functions": [
+            {
+              "function": "minecraft:copy_nbt",
+              "source": "block_entity",
+              "ops": [
+                { "source": "Inventory", "target": "BlockEntityTag.Inventory", "op": "replace" },
+                { "source": "PendingBuffer", "target": "BlockEntityTag.PendingBuffer", "op": "replace" },
+                { "source": "ChunkNorth", "target": "BlockEntityTag.ChunkNorth", "op": "replace" },
+                { "source": "ChunkSouth", "target": "BlockEntityTag.ChunkSouth", "op": "replace" },
+                { "source": "ChunkWest", "target": "BlockEntityTag.ChunkWest", "op": "replace" },
+                { "source": "ChunkEast", "target": "BlockEntityTag.ChunkEast", "op": "replace" },
+                { "source": "SilkTouch", "target": "BlockEntityTag.SilkTouch", "op": "replace" },
+                { "source": "MineLiquids", "target": "BlockEntityTag.MineLiquids", "op": "replace" },
+                { "source": "VoidStone", "target": "BlockEntityTag.VoidStone", "op": "replace" },
+                { "source": "VoidDirt", "target": "BlockEntityTag.VoidDirt", "op": "replace" }
+              ]
+            }
+          ],
+          "conditions": [
+            { "condition": "minecraft:survives_explosion" }
+          ]
+        }
+      ]
+    }
+  ]
+}
